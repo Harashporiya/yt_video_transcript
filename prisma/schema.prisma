@@ -13,6 +13,8 @@ model User {
   name      String
   createdAt DateTime @default(now())
   video Video[]
+  summaries VideoSummary[]
+  questions VideoQuestion[]
 }
 
 model Video{
@@ -23,13 +25,47 @@ model Video{
   videoUrl String
   title String?
   thumbnail String?
-  transcript  String?  @db.Text
   namespace   String @unique
   totalChunks Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  summaries    VideoSummary[]
+  questions    VideoQuestion[]
   @@unique([userId, videoId])
   @@index([userId])
   @@index([videoId])
 }
 
+model VideoSummary{
+  id String @id @default(uuid())
+  videoRefId String
+  video  Video @relation(fields: [videoRefId], references: [id],onDelete: Cascade)
+  userId String
+  user  User @relation(fields: [userId], references: [id],onDelete: Cascade)
+  shortSummary      String   @db.Text
+  longSummary       String   @db.Text
+  keypointSummary   Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId, videoRefId])
+  @@index([userId])
+  @@index([videoRefId])
+}
+
+model VideoQuestion {
+  id String @id @default(uuid())
+  videoRefId String
+  video  Video @relation(fields: [videoRefId], references: [id],onDelete: Cascade)
+  userId String
+  user  User @relation(fields: [userId], references: [id],onDelete: Cascade)
+  easyQuestions     Json
+  mediumQuestions   Json
+  hardQuestions     Json
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([userId, videoRefId])
+  @@index([userId])
+  @@index([videoRefId])
+}
