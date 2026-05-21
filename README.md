@@ -12,8 +12,10 @@ A highly efficient, production-ready Express.js backend implementing a multi-ten
 * **High-Dimensional Embeddings**: Integrates Google Generative AI (`gemini-embedding-001`) to generate high-fidelity 768-dimensional vector representations.
 * **Namespace-Isolated Vector Search**: Stores and retrieves semantic chunks dynamically, utilizing isolated namespaces in the Pinecone Vector Database (`userId-videoId`).
 * **Context-Bounded AI Q&A**: Uses Gemini-2.5-Flash-Lite with a strict prompt system to answer user queries *only* from the extracted video's context, preventing hallucinations.
+* **AI Interview Question Generator**: Generates interview questions categorized by difficulty (easy, medium, hard) based on the specific video context.
 * **Complete Lifecycle Deletion**: Cleans up all storage footprints by deleting video records from PostgreSQL and wiping the entire corresponding Pinecone namespace.
 * **Clean MVC Architecture**: Organized cleanly with separation of routes, controllers, services, and middlewares.
+* **Normalized Relational Database**: Uses a fully normalized PostgreSQL schema separating `Video`, `VideoSummary`, and `VideoQuestion` entities for data integrity.
 
 ---
 
@@ -89,16 +91,17 @@ flowchart TD
 yt/
 ├── controllers/
 │   ├── user.controllers.js         # Signup and login endpoints logic
-│   └── youtube.controllers.js      # Handles video Q&A, processing, and deletion endpoints
+│   └── youtube.controllers.js      # Handles video Q&A, processing, interview gen, and deletion endpoints
 ├── lib/
 │   └── prisma.js                   # Prisma Client initialization using PG Adapter
 ├── routes/
 │   ├── user.routes.js              # User auth route registrations
-│   └── youtube.routes.js           # YouTube processing, QA, and deletion route registrations
+│   └── youtube.routes.js           # YouTube processing, QA, interview, and deletion route registrations
 ├── services/
-│   └── youtube.service.js          # Core RAG, LangChain, Pinecone, and Gemini service integrations
+│   ├── ai/                         # Reusable core AI services (Embeddings, LLM, Pinecone)
+│   └── video/                      # Specific video processing services (Q&A, Summaries, Interview Gen)
 ├── prisma/
-│   ├── schema.prisma               # Prisma relational schemas (User, Video)
+│   ├── schema.prisma               # Prisma relational schemas (User, Video, VideoSummary, VideoQuestion)
 │   └── migrations/                 # Database migration history
 ├── .env                            # Local configuration and API credentials
 ├── .gitignore                      # Git ignore file
@@ -293,7 +296,42 @@ curl -X POST http://localhost:3000/api/youtube/ask/dQw4w9WgXcQ \
 
 ---
 
-### 5. Delete Processed Video
+### 5. Generate Interview Questions
+Generates interview questions categorized by difficulty (easy, medium, hard) based on the video transcript.
+
+* **URL:** `/api/youtube/interview/:videoId`
+* **Method:** `POST`
+* **Headers:** 
+  * `Authorization: <your_jwt_token>`
+
+#### Example cURL
+```bash
+curl -X POST http://localhost:3000/api/youtube/interview/dQw4w9WgXcQ \
+     -H "Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+```
+
+#### Successful Response (`200 OK`)
+```json
+{
+  "success": true,
+  "message": "Interview questions generated successfully",
+  "questions": {
+    "easyQuestions": [
+      { "question": "What is the main topic of the video?" }
+    ],
+    "mediumQuestions": [
+      { "question": "How does vector search improve QA systems?" }
+    ],
+    "hardQuestions": [
+      { "question": "Explain the architectural difference between sparse and dense retrieval." }
+    ]
+  }
+}
+```
+
+---
+
+### 6. Delete Processed Video
 Deletes the video transcript from PostgreSQL database and removes the associated namespace and all indexed document chunks from Pinecone.
 
 * **URL:** `/api/youtube/delete/:videoId`
