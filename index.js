@@ -12,10 +12,6 @@ app.use("/api/users", userRoutes);
 app.use("/api/youtube", youtubeRoutes);
 
 
-app.get("/", (req, res) => {
-  res.send("Server Running");
-});
-
 const PORT = process.env.PORT || 8000;
 
 app.listen(PORT, () => {
