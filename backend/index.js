@@ -9,11 +9,8 @@ const app = express();
 
 const allowedOrigins = [
   process.env.LOCAL_FRONTEND_URL,
-  process.env.FRONTEND_DEPLOY_URL,
-  "http://localhost:3000",
-  "http://localhost:3001",
-  "https://yt-video-transcript-chi.vercel.app"
-].filter(Boolean).map(url => url.replace(/\/$/, ""));
+  process.env.FRONTEND_DEPLOY_URL
+]
 
 const corsOptions = {
   origin: allowedOrigins,
