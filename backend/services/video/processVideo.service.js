@@ -10,80 +10,80 @@ import { generateSummary } from "./summary.service.js";
 
 export const processVideoService = async (videoUrl, userId) => {
 
-    const videoId = getVideoId(videoUrl);
+  const videoId = getVideoId(videoUrl);
 
-    const namespace =`${userId}-${videoId}`;
+  const namespace = `${userId}-${videoId}`;
 
-    const existingVideo = await prisma.video.findUnique({
-        where: {
-          namespace,
-        },
-        include: {
-          summaries: true,
-        },
-      });
+  const existingVideo = await prisma.video.findUnique({
+    where: {
+      namespace,
+    },
+    include: {
+      summaries: true,
+    },
+  });
 
-    if (existingVideo) {
-      return existingVideo;
+  if (existingVideo) {
+    return existingVideo;
+  }
+
+  const { title, thumbnail } = await getYoutubeVideoInfo(videoId);
+
+  const transcript = await getTranscript(videoUrl);
+
+  const parsedSummary = await generateSummary(transcript);
+
+  const splitter = new RecursiveCharacterTextSplitter({
+    chunkSize: 1000,
+    chunkOverlap: 200,
+  });
+
+  const docs = await splitter.createDocuments([
+    transcript,
+  ]);
+
+  const updateDocs = docs.map((doc, index) => {
+    doc.metadata = {
+      userId,
+      videoId,
+      videoUrl,
+      chunkIndex: index,
+    };
+
+    return doc;
+  });
+
+  await PineconeStore.fromDocuments(
+    updateDocs,
+    embeddings,
+    {
+      pineconeIndex,
+      namespace,
     }
+  );
 
-    const {title,thumbnail} = await getYoutubeVideoInfo(videoId);
+  const saveVideo = await prisma.video.create({
+    data: {
+      userId,
+      videoId,
+      videoUrl,
+      title,
+      thumbnail,
+      namespace,
+      totalChunks:
+        updateDocs.length,
+    },
+  });
 
-    const transcript =await getTranscript(videoUrl);
+  await prisma.videoSummary.create({
+    data: {
+      userId,
+      videoRefId: saveVideo.id,
+      shortSummary: parsedSummary.shortSummary,
+      longSummary: parsedSummary.longSummary,
+      keypointSummary: JSON.stringify(parsedSummary.keypointSummary),
+    },
+  });
 
-    const parsedSummary =await generateSummary(transcript);
-
-    const splitter =new RecursiveCharacterTextSplitter({
-        chunkSize: 1000,
-        chunkOverlap: 200,
-      });
-
-    const docs =await splitter.createDocuments([
-        transcript,
-      ]);
-
-    const updateDocs =docs.map((doc, index) => {
-        doc.metadata = {
-          userId,
-          videoId,
-          videoUrl,
-          chunkIndex: index,
-        };
-
-        return doc;
-      });
-
-    await PineconeStore.fromDocuments(
-      updateDocs,
-      embeddings,
-      {
-        pineconeIndex,
-        namespace,
-      }
-    );
-
-    const saveVideo =await prisma.video.create({
-        data: {
-          userId,
-          videoId,
-          videoUrl,
-          title,
-          thumbnail,
-          namespace,
-          totalChunks:
-            updateDocs.length,
-        },
-      });
-
-    await prisma.videoSummary.create({
-      data: {
-        userId,
-        videoRefId: saveVideo.id,
-        shortSummary:parsedSummary.shortSummary,
-        longSummary:parsedSummary.longSummary,
-        keypointSummary:JSON.stringify(parsedSummary.keypointSummary ),
-      },
-    });
-
-    return saveVideo;
+  return saveVideo;
 };
