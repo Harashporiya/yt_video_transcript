@@ -35,9 +35,9 @@ export const getTranscript = async (videoUrl) => {
     console.log("Using Apify API to fetch transcript...");
 
     const input = {
-      videoUrl: videoUrl,        // ✅ Fixed: was `startUrls` which is wrong
-      outputFormat: "plaintext",
-      targetLanguage: "en",
+      youtube_url: videoUrl,
+      language: "en",
+      include_transcript_text: true,
     };
 
     const run = await client.actor("starvibe/youtube-video-transcript").call(input);
@@ -45,7 +45,7 @@ export const getTranscript = async (videoUrl) => {
 
     if (items && items.length > 0) {
       const fullText = items
-        .map((item) => item.text || item.transcript || item.translatedText || "")
+        .map((item) => item.transcript_text || item.text || item.transcript || item.translatedText || "")
         .filter(Boolean)
         .join("\n");
 
