@@ -5,6 +5,9 @@ import {
   askQuestionController,
   videoDeleteController,
   generateInterviewController,
+  getSummaryController,
+  getChatHistoryController,
+  saveChatMessageController,
 } from "../controllers/youtube.controllers.js";
 import { authenticateToken } from "../middlewares.js";
 
@@ -17,5 +20,11 @@ router.post("/ask/:videoId",authenticateToken,askQuestionController);
 router.delete("/delete/:videoId",authenticateToken,videoDeleteController)
 
 router.post("/interview/:videoId",authenticateToken,generateInterviewController);
+
+router.get("/summary/:videoId",authenticateToken,getSummaryController);
+
+router.get("/chat/:videoId",authenticateToken,getChatHistoryController);
+
+router.post("/chat/:videoId/save",authenticateToken,saveChatMessageController);
 
 export default router;
