@@ -6,16 +6,15 @@ import userRoutes from "./routes/user.routes.js"
 dotenv.config();
 
 const app = express();
-
+console.log(process.env.LOCAL_FRONTEND_URL, process.env.FRONTEND_DEPLOY_URL)
 const corsOptions = {
-  origin: ["http://localhost:3001", "http://localhost:3000"],
-  methods: ["GET","POST","DELETE","PUT","PATCH", "OPTIONS"],
+  origin: [process.env.LOCAL_FRONTEND_URL, process.env.FRONTEND_DEPLOY_URL],
+  methods: ["GET", "POST", "DELETE", "PUT", "PATCH", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
 app.use(express.json());
 
 app.use("/api/users", userRoutes);
