@@ -27,7 +27,7 @@ function DashboardContent() {
                     <SidebarTrigger className="text-white hover:bg-[#2f2f2f] hover:text-white" />
                     <div className="flex items-center gap-2 px-3 py-2 hover:bg-[#2f2f2f] hover:text-white rounded-lg cursor-pointer transition-colors text-lg font-semibold text-white/90">
                         <YoutubeLogoIcon size={24} className="text-red-500" weight="fill" />
-                        <span>YouTube AI</span>
+                        <span>YouTube Video Transcripter</span>
                     </div>
                 </div>
             </header>
