@@ -107,7 +107,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               className="flex items-center gap-2 hover:bg-[#212121] hover:text-white px-2 py-1.5 rounded-lg cursor-pointer text-white/90 transition-colors flex-1"
             >
               <YoutubeLogoIcon size={24} className="text-red-500" weight="fill" />
-              <span className="font-semibold text-sm tracking-wide">YouTube AI</span>
+              <span className="font-semibold text-sm tracking-wide">YouTube Video Transcripter</span>
             </div>
             <div className="flex items-center gap-1">
               <button className="p-1.5 text-white/70 hover:text-white rounded-md hover:bg-[#212121] transition-colors">

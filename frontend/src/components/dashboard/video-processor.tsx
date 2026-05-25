@@ -116,49 +116,7 @@ export function VideoProcessor() {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl mt-auto pb-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-300">
 
-                    <div className="flex flex-col items-start gap-2.5 p-5 rounded-2xl border border-white/5 bg-[#2a2a2a] hover:bg-[#333333] transition-colors cursor-default group">
-                        <div className="flex items-center gap-2 text-white/90 font-medium mb-1">
-                            <ChatCircleTextIcon size={20} className="text-purple-400" weight="fill" />
-                            <span>Interactive Chat</span>
-                        </div>
-                        <p className="text-white/50 text-sm leading-relaxed group-hover:text-white/70 transition-colors">
-                            Ask specific questions about the video content. The AI acts as an expert on the video, ready to explain complex concepts or find exact details for you.
-                        </p>
-                    </div>
-
-                    <div className="flex flex-col items-start gap-2.5 p-5 rounded-2xl border border-white/5 bg-[#2a2a2a] hover:bg-[#333333] transition-colors cursor-default group">
-                        <div className="flex items-center gap-2 text-white/90 font-medium mb-1">
-                            <ListBulletsIcon size={20} className="text-emerald-400" weight="fill" />
-                            <span>Smart Summary</span>
-                        </div>
-                        <p className="text-white/50 text-sm leading-relaxed group-hover:text-white/70 transition-colors">
-                            Don&apos;t have time to watch a 2-hour lecture? Get AI-generated structured summaries and key takeaways instantly.
-                        </p>
-                    </div>
-
-                    <div className="flex flex-col items-start gap-2.5 p-5 rounded-2xl border border-white/5 bg-[#2a2a2a] hover:bg-[#333333] transition-colors cursor-default group">
-                        <div className="flex items-center gap-2 text-white/90 font-medium mb-1">
-                            <LightbulbIcon size={20} className="text-amber-400" weight="fill" />
-                            <span>AI Interview Prep</span>
-                        </div>
-                        <p className="text-white/50 text-sm leading-relaxed group-hover:text-white/70 transition-colors">
-                            Automatically generate categorized practice questions (Easy, Medium, Hard) based on educational or tutorial videos to test your knowledge.
-                        </p>
-                    </div>
-
-                    <div className="flex flex-col items-start gap-2.5 p-5 rounded-2xl border border-white/5 bg-[#2a2a2a] hover:bg-[#333333] transition-colors cursor-default group">
-                        <div className="flex items-center gap-2 text-white/90 font-medium mb-1">
-                            <TextAaIcon size={20} className="text-blue-400" weight="fill" />
-                            <span>Full Transcript</span>
-                        </div>
-                        <p className="text-white/50 text-sm leading-relaxed group-hover:text-white/70 transition-colors">
-                            Extract and read the complete spoken text directly from the video. Easily search for specific keywords or quotes without scrubbing the timeline.
-                        </p>
-                    </div>
-
-                </div>
 
             </div>
         </div>
