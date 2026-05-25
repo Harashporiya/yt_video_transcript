@@ -2,7 +2,7 @@
 
 A powerful, AI-driven full-stack web application designed to automatically extract YouTube video transcripts, generate insightful summaries, and provide an interactive ChatGPT-like experience to converse with video content.
 
-![YouTube Video Transcripter](#) *(You can add a screenshot here)*
+<img src="./frontend/public/home.png" width="800" />
 
 ## 🚀 Features
 
