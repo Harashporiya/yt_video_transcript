@@ -57,7 +57,7 @@ export function VideoProcessor() {
     }
 
     return (
-        <div className="flex flex-1 flex-col items-center px-4 w-full h-full overflow-y-auto bg-[#212121] [&::-webkit-scrollbar]:hidden">
+        <div className="flex flex-1 flex-col items-center px-4 w-full h-full overflow-y-auto bg-black [&::-webkit-scrollbar]:hidden">
             <div className="flex flex-col items-center justify-center max-w-4xl w-full flex-1 pt-10 pb-6 relative">
                 
                 {error && (
@@ -85,7 +85,7 @@ export function VideoProcessor() {
 
                 {/* Input Section */}
                 <div className="w-full max-w-3xl relative mb-16 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150">
-                    <div className="bg-[#2f2f2f] rounded-[24px] flex flex-col p-3 shadow-2xl border border-white/5 focus-within:border-white/20 focus-within:ring-1 focus-within:ring-white/20 transition-all duration-300">
+                    <div className="bg-[#0a0a0a] rounded-[24px] flex flex-col p-3 shadow-2xl border border-white/5 focus-within:border-white/20 focus-within:ring-1 focus-within:ring-white/20 transition-all duration-300">
                         <div className="flex items-center gap-3 px-3 py-2">
                             <LinkIcon size={22} className="text-white/40 shrink-0" weight="bold" />
                             <input
