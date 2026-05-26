@@ -72,7 +72,7 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
 
         initChat();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeVideoId, action, status]);
+    }, [activeVideoId, action]);
 
     const saveChatToDB = async (role: string, text: string) => {
         const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : '');
