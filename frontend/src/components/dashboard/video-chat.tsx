@@ -25,6 +25,9 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
     const [question, setQuestion] = useState("")
     const [chatHistory, setChatHistory] = useState<{ role: string, text: string }[]>([])
     const [chatLoading, setChatLoading] = useState(false)
+    const [chatLimitReached, setChatLimitReached] = useState(false)
+    const [chatCount, setChatCount] = useState(0)
+    const CHAT_LIMIT = 3
 
     const [view, setView] = useState<'chat' | 'summary' | 'interview'>('chat')
     const [summaryData, setSummaryData] = useState<any>(null)
@@ -38,6 +41,8 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
         setSummaryData(null);
         setInterviewData(null);
         setChatHistory([]);
+        setChatLimitReached(false);
+        setChatCount(0);
 
         const initChat = async () => {
             const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : '');
@@ -50,6 +55,10 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
                     });
                     if (res.data.chatHistory) {
                         setChatHistory(res.data.chatHistory);
+
+                        const userMsgCount = res.data.chatHistory.filter((m: any) => m.role === 'user').length;
+                        setChatCount(userMsgCount);
+                        if (userMsgCount >= 3) setChatLimitReached(true);
                     } else {
                         setChatHistory([]);
                     }
@@ -71,7 +80,7 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
         };
 
         initChat();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeVideoId, action]);
 
     const saveChatToDB = async (role: string, text: string) => {
@@ -112,7 +121,7 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
     }
 
     const askQuestion = async () => {
-        if (!question || !activeVideoId) return;
+        if (!question || !activeVideoId || chatLimitReached) return;
         const userQ = question;
         const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : '');
         setQuestion("");
@@ -132,9 +141,17 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
             });
 
             setChatHistory(prev => [...prev, { role: "ai", text: res.data.answer }]);
-        } catch (error) {
+            const newCount = chatCount + 1;
+            setChatCount(newCount);
+            if (newCount >= CHAT_LIMIT) setChatLimitReached(true);
+        } catch (error: any) {
             console.error(error);
-            setChatHistory(prev => [...prev, { role: "ai", text: "Error fetching answer." }]);
+            if (error?.response?.data?.limitReached) {
+                setChatLimitReached(true);
+                setChatHistory(prev => prev.filter((_, i) => i !== prev.length - 1)); // remove optimistic user msg
+            } else {
+                setChatHistory(prev => [...prev, { role: "ai", text: "Error fetching answer." }]);
+            }
         } finally {
             setChatLoading(false);
         }
@@ -236,12 +253,39 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
             </div>
 
             <div className="w-full pb-6 pt-2 shrink-0 relative">
-                <div className="bg-[#0a0a0a] rounded-[24px] flex flex-col p-3 shadow-lg border border-white/5 focus-within:border-white/20">
+
+                {/* Chat Limit Banner */}
+                {chatLimitReached && (
+                    <div className="mb-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 flex items-center gap-3 animate-in fade-in duration-300">
+                        <div className="bg-amber-500/20 p-1.5 rounded-full shrink-0">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="text-amber-400" viewBox="0 0 256 256">
+                                <path d="M236.8,188.09,149.35,36.22a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z" />
+                            </svg>
+                        </div>
+                        <div className="flex-1">
+                            <p className="text-amber-400 font-semibold text-xs">Chat Limit Reached</p>
+                            <p className="text-amber-400/70 text-xs leading-relaxed">
+                                You have hit your chat limit. Only <span className="font-bold text-amber-400">3 messages</span> are allowed — no more messages can be sent.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Messages remaining indicator */}
+                {!chatLimitReached && chatCount > 0 && (
+                    <div className="mb-2 flex justify-end">
+                        <span className="text-white/30 text-xs">{CHAT_LIMIT - chatCount} message{CHAT_LIMIT - chatCount !== 1 ? 's' : ''} remaining</span>
+                    </div>
+                )}
+
+                <div className={`bg-[#0a0a0a] rounded-[24px] flex flex-col p-3 shadow-lg border transition-colors ${chatLimitReached ? 'border-amber-500/20 opacity-50' : 'border-white/5 focus-within:border-white/20'
+                    }`}>
                     <textarea
                         value={question}
                         onChange={(e) => setQuestion(e.target.value)}
-                        placeholder="Ask anything about the video..."
-                        className="w-full bg-transparent text-white placeholder:text-white/50 resize-none outline-none min-h-[44px] max-h-[200px] px-3 py-2 text-base [&::-webkit-scrollbar]:hidden"
+                        placeholder={chatLimitReached ? "Chat limit reached. You cannot send more messages." : "Ask anything about the video..."}
+                        disabled={chatLimitReached}
+                        className="w-full bg-transparent text-white placeholder:text-white/50 resize-none outline-none min-h-[44px] max-h-[200px] px-3 py-2 text-base [&::-webkit-scrollbar]:hidden disabled:cursor-not-allowed"
                         rows={1}
                         onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
@@ -257,7 +301,7 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={askQuestion}
-                                disabled={chatLoading || !question}
+                                disabled={chatLoading || !question || chatLimitReached}
                                 className="p-2 bg-white text-black hover:text-black rounded-full hover:bg-white/90 disabled:opacity-50 transition-colors ml-1"
                             >
                                 <ArrowUpIcon size={20} weight="bold" />

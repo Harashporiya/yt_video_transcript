@@ -4,14 +4,12 @@ import { useRouter } from "next/navigation"
 import axios from "axios"
 import {
     YoutubeLogoIcon,
-    TextAaIcon,
-    ChatCircleTextIcon,
-    ListBulletsIcon,
     LinkIcon,
     ArrowRightIcon,
     SpinnerGapIcon,
-    LightbulbIcon,
-    InfoIcon
+    InfoIcon,
+    LockSimpleIcon,
+    WarningIcon
 } from "@phosphor-icons/react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
@@ -22,6 +20,7 @@ export function VideoProcessor() {
     const [videoUrl, setVideoUrl] = useState("")
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [limitReached, setLimitReached] = useState(false)
 
     const extractVideoId = (url: string) => {
         const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/
@@ -31,6 +30,7 @@ export function VideoProcessor() {
 
     const processVideo = async () => {
         setError(null);
+        setLimitReached(false);
         if (!videoUrl) return;
         const vId = extractVideoId(videoUrl);
         if (!vId) {
@@ -50,7 +50,11 @@ export function VideoProcessor() {
             setVideoUrl("");
         } catch (error: any) {
             console.error(error);
-            setError(error?.response?.data?.message || "Failed to process video");
+            if (error?.response?.data?.limitReached) {
+                setLimitReached(true);
+            } else {
+                setError(error?.response?.data?.message || "Failed to process video");
+            }
         } finally {
             setLoading(false);
         }
@@ -60,6 +64,25 @@ export function VideoProcessor() {
         <div className="flex flex-1 flex-col items-center px-4 w-full h-full overflow-y-auto bg-black [&::-webkit-scrollbar]:hidden">
             <div className="flex flex-col items-center justify-center max-w-4xl w-full flex-1 pt-10 pb-6 relative">
                 
+                {/* Video Limit Banner */}
+                {limitReached && (
+                    <div className="absolute top-0 w-full px-4 pt-4 z-50 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 flex items-start gap-3">
+                            <div className="bg-amber-500/20 p-2 rounded-full shrink-0 mt-0.5">
+                                <LockSimpleIcon size={18} className="text-amber-400" weight="bold" />
+                            </div>
+                            <div className="flex-1">
+                                <p className="text-amber-400 font-semibold text-sm">Video Limit Reached</p>
+                                <p className="text-amber-400/70 text-xs mt-0.5 leading-relaxed">
+                                    You have hit your video limit. You can only upload <span className="font-bold text-amber-400">1 video</span> — no more uploads allowed.
+                                </p>
+                            </div>
+                            <button onClick={() => setLimitReached(false)} className="text-amber-400/50 hover:text-amber-400 transition-colors shrink-0 text-lg leading-none">&times;</button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Generic Error */}
                 {error && (
                     <div className="absolute top-0 w-full px-4 pt-4 z-50">
                         <Alert variant="destructive" className="bg-red-500/10 border-red-500/20 text-red-500">
