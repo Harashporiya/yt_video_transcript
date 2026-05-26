@@ -18,7 +18,7 @@ interface VideoChatProps {
 }
 
 export function VideoChat({ activeVideoId }: VideoChatProps) {
-    const { data: session } = useSession()
+    const { data: session, status } = useSession()
     const searchParams = useSearchParams()
     const action = searchParams.get("action")
 
@@ -71,7 +71,8 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
         };
 
         initChat();
-    }, [activeVideoId, action, session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeVideoId, action, status]);
 
     const saveChatToDB = async (role: string, text: string) => {
         const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : '');
