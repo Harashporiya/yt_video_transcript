@@ -72,7 +72,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     } else {
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const executeDelete = async (videoId: string) => {
@@ -155,64 +154,64 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <div className="text-white/30 text-xs px-2 py-1">No videos processed yet.</div>
               ) : (
                 videos.map(v => (
-                <SidebarMenuButton
-                  key={v.id}
-                  onClick={() => router.push(`?v=${v.videoId}`)}
-                  className="hover:bg-white/5 hover:text-white text-white/80 text-sm h-9 rounded-lg font-medium flex items-center gap-2.5 cursor-pointer group relative"
-                >
-                  <VideoCameraIcon size={16} className="shrink-0 text-red-400" />
-                  <span className="truncate flex-1 text-left pr-6">{v.title || v.videoId}</span>
+                  <SidebarMenuButton
+                    key={v.id}
+                    onClick={() => router.push(`?v=${v.videoId}`)}
+                    className="hover:bg-white/5 hover:text-white text-white/80 text-sm h-9 rounded-lg font-medium flex items-center gap-2.5 cursor-pointer group relative"
+                  >
+                    <VideoCameraIcon size={16} className="shrink-0 text-red-400" />
+                    <span className="truncate flex-1 text-left pr-6">{v.title || v.videoId}</span>
 
-                  <div className="absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                    <DropdownMenu onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
-                      <DropdownMenuTrigger asChild>
-                        <div role="button" className="p-1 hover:text-white text-white/50 rounded-md hover:bg-white/10 z-10 flex items-center justify-center cursor-pointer">
-                          <DotsThreeIcon size={20} weight="bold" />
-                        </div>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-40 bg-[#0a0a0a] text-white border-white/10 rounded-xl shadow-xl overflow-hidden p-1">
-                        {confirmDeleteId === v.videoId ? (
-                          <div className="flex flex-col gap-1">
-                            <div className="text-[10px] text-white/50 font-bold px-2 py-1.5 uppercase tracking-wider text-center">Are you sure?</div>
-                            <DropdownMenuItem
-                              className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer flex items-center justify-center gap-2 rounded-lg font-medium py-2 px-2.5"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                executeDelete(v.videoId);
-                              }}
-                            >
-                              Yes, Delete
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-white/70 focus:text-white focus:bg-white/10 cursor-pointer flex items-center justify-center gap-2 rounded-lg font-medium py-2 px-2.5"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                setConfirmDeleteId(null);
-                              }}
-                            >
-                              Cancel
-                            </DropdownMenuItem>
+                    <div className="absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenu onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
+                        <DropdownMenuTrigger asChild>
+                          <div role="button" className="p-1 hover:text-white text-white/50 rounded-md hover:bg-white/10 z-10 flex items-center justify-center cursor-pointer">
+                            <DotsThreeIcon size={20} weight="bold" />
                           </div>
-                        ) : (
-                          <>
-                            <DropdownMenuItem
-                              className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer flex items-center gap-2.5 rounded-lg font-medium py-2 px-2.5"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                e.preventDefault();
-                                setConfirmDeleteId(v.videoId);
-                              }}
-                            >
-                              <TrashIcon size={16} weight="bold" />
-                              Delete Video
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </SidebarMenuButton>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-40 bg-[#0a0a0a] text-white border-white/10 rounded-xl shadow-xl overflow-hidden p-1">
+                          {confirmDeleteId === v.videoId ? (
+                            <div className="flex flex-col gap-1">
+                              <div className="text-[10px] text-white/50 font-bold px-2 py-1.5 uppercase tracking-wider text-center">Are you sure?</div>
+                              <DropdownMenuItem
+                                className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer flex items-center justify-center gap-2 rounded-lg font-medium py-2 px-2.5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  executeDelete(v.videoId);
+                                }}
+                              >
+                                Yes, Delete
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="text-white/70 focus:text-white focus:bg-white/10 cursor-pointer flex items-center justify-center gap-2 rounded-lg font-medium py-2 px-2.5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  setConfirmDeleteId(null);
+                                }}
+                              >
+                                Cancel
+                              </DropdownMenuItem>
+                            </div>
+                          ) : (
+                            <>
+                              <DropdownMenuItem
+                                className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer flex items-center gap-2.5 rounded-lg font-medium py-2 px-2.5"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  setConfirmDeleteId(v.videoId);
+                                }}
+                              >
+                                <TrashIcon size={16} weight="bold" />
+                                Delete Video
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </SidebarMenuButton>
                 ))
               )}
             </div>
