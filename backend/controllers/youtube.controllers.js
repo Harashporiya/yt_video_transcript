@@ -6,66 +6,107 @@ import { generateInterviewService } from '../services/video/generateInterview.se
 
 export const processVideoController = async (req, res) => {
   // console.log(req.user)
-    try {
-      const { videoUrl } = req.body;
+  try {
+    const { videoUrl } = req.body;
 
-      if (!videoUrl) {
-        return res.status(400).json({
-          success: false,
-          message: "Video URL is required",
-        });
-      }
-
-      await processVideoService(videoUrl,req.user.userId);
-
-      res.status(200).json({
-        success: true,
-        message:
-          "Video processed successfully",
-      });
-    } catch (error) {
-      console.log(error);
-
-      res.status(500).json({
+    if (!videoUrl) {
+      return res.status(400).json({
         success: false,
-        message: error.message,
+        message: "Video URL is required",
       });
     }
-  };
+
+
+    const existingVideoCount = await prisma.video.count({
+      where: { userId: req.user.userId },
+    });
+
+    if (existingVideoCount >= 1) {
+      return res.status(403).json({
+        success: false,
+        message: "Video upload limit reached. You can only upload 1 video. Please delete the existing video to upload a new one.",
+        limitReached: true,
+        limitType: "video",
+      });
+    }
+
+    await processVideoService(videoUrl, req.user.userId);
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Video processed successfully",
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 export const askQuestionController = async (req, res) => {
-    const videoId = req.params.videoId;
-    const userId = req.user.userId;
-    try {
-      const { question, chatHistory } = req.body;
+  const videoId = req.params.videoId;
+  const userId = req.user.userId;
+  try {
+    const { question, chatHistory } = req.body;
 
-      if (!question) {
-        return res.status(400).json({
-          success: false,
-          message: "Question is required",
-        });
-      }
-
-      const answer =
-        await askQuestionService(
-          question,
-          userId,
-          videoId,
-          chatHistory
-        );
-
-      res.status(200).json({
-        success: true,
-        answer,
-      });
-    } catch (error) {
-      console.log(error);
-
-      res.status(500).json({
+    if (!question) {
+      return res.status(400).json({
         success: false,
-        message: error.message,
+        message: "Question is required",
       });
     }
+
+
+    const CHAT_LIMIT = 3;
+    const video = await prisma.video.findUnique({
+      where: { namespace: `${userId}-${videoId}` },
+    });
+
+    if (video) {
+      const userMessageCount = await prisma.chatMessage.count({
+        where: {
+          videoRefId: video.id,
+          userId,
+          role: "user",
+        },
+      });
+
+      if (userMessageCount >= CHAT_LIMIT) {
+        return res.status(403).json({
+          success: false,
+          message: `Chat limit reached. You can only send ${CHAT_LIMIT} messages per video.`,
+          limitReached: true,
+          limitType: "chat",
+          currentCount: userMessageCount,
+          maxLimit: CHAT_LIMIT,
+        });
+      }
+    }
+
+    const answer =
+      await askQuestionService(
+        question,
+        userId,
+        videoId,
+        chatHistory
+      );
+
+    res.status(200).json({
+      success: true,
+      answer,
+    });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
 
 export const videoDeleteController = async (req, res) => {
@@ -74,30 +115,30 @@ export const videoDeleteController = async (req, res) => {
 
   try {
     if (!videoId) {
-        return res.status(400).json({
-          success: false,
-          message:
-            "Video ID is required",
-        });
-      }
-      const notExists = await prisma.video.findUnique({
-        where: {
-          userId_videoId:{
-            userId,
-            videoId
-          }
-        },
+      return res.status(400).json({
+        success: false,
+        message:
+          "Video ID is required",
       });
+    }
+    const notExists = await prisma.video.findUnique({
+      where: {
+        userId_videoId: {
+          userId,
+          videoId
+        }
+      },
+    });
 
-      console.log(notExists)
+    console.log(notExists)
 
-      if (!notExists) {
-        return res.status(404).json({
-          success: false,
-          message: "Video not found",
-        });
-      }
-    await deleteVideoService(userId,videoId);
+    if (!notExists) {
+      return res.status(404).json({
+        success: false,
+        message: "Video not found",
+      });
+    }
+    await deleteVideoService(userId, videoId);
 
     res.status(200).json({
       success: true,
@@ -241,6 +282,29 @@ export const saveChatMessageController = async (req, res) => {
 
     if (!video) {
       return res.status(404).json({ success: false, message: "Video not found" });
+    }
+
+
+    const CHAT_LIMIT = 3;
+    if (role === "user") {
+      const userMessageCount = await prisma.chatMessage.count({
+        where: {
+          videoRefId: video.id,
+          userId,
+          role: "user",
+        },
+      });
+
+      if (userMessageCount >= CHAT_LIMIT) {
+        return res.status(403).json({
+          success: false,
+          message: `Chat limit reached. You can only send ${CHAT_LIMIT} messages per video.`,
+          limitReached: true,
+          limitType: "chat",
+          currentCount: userMessageCount,
+          maxLimit: CHAT_LIMIT,
+        });
+      }
     }
 
     const chatMessage = await prisma.chatMessage.create({
