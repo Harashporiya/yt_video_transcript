@@ -52,6 +52,8 @@ export const askQuestionService = async (question, userId, videoId, chatHistory 
             If the question refers to something mentioned previously, use the Previous Conversation to understand the context.
             For questions about the video, answer ONLY from the provided context.
 
+            CRITICAL: You MUST respond in the exact same language or language style as the user's question. If the user asks in Hinglish (Hindi language using Roman/English characters, e.g. "is video me kya hai", "mujhe batao"), you MUST respond in Hinglish. If the user asks in English, respond in English. If the user asks in Hindi (Devanagari script), respond in Hindi. Match the user's language style precisely.
+
             Context:
             ${context}
 
