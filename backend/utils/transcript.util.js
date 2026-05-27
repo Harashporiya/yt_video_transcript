@@ -6,38 +6,58 @@ const client = new ApifyClient({
   token: process.env.APIFY_API_TOKEN,
 });
 
+const decodeHtmlEntities = (str) => {
+  if (!str) return "";
+  return str
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/&#x2F;/g, "/")
+    .replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ");
+};
+
 export const getTranscript = async (videoUrl) => {
-  // Extract video ID to ensure a strictly formatted URL for Apify
+  if (!videoUrl) {
+    throw new Error("Video URL is required to fetch transcript.");
+  }
+
   const videoId = getVideoId(videoUrl);
+  if (!videoId) {
+    throw new Error("Could not extract a valid YouTube video ID from the provided URL.");
+  }
+
   const standardUrl = `https://www.youtube.com/watch?v=${videoId}`;
 
-  // Step 1: Try English transcript
   try {
-    console.log("Attempting to fetch English transcript locally...");
-    const transcriptArr = await YoutubeTranscript.fetchTranscript(videoUrl, { lang: "en" });
-    console.log("Successfully fetched English transcript locally.");
-    return transcriptArr.map((item) => item.text).join("\n");
+    console.log(`[Transcript] Attempting to fetch English transcript locally for ID: ${videoId}...`);
+    const transcriptArr = await YoutubeTranscript.fetchTranscript(videoId, { lang: "en" });
+    console.log("[Transcript] Successfully fetched English transcript locally.");
+    const fullText = transcriptArr.map((item) => item.text).join(" ");
+    return decodeHtmlEntities(fullText);
   } catch (localEnError) {
-    console.log(`Local English fetch failed. Reason: ${localEnError.message}`);
+    console.log(`[Transcript] Local English fetch failed: ${localEnError.message}`);
   }
 
-  // Step 2: Try any available language transcript (e.g., Hindi)
   try {
-    console.log("Attempting to fetch transcript in any available language...");
-    const transcriptArr = await YoutubeTranscript.fetchTranscript(videoUrl); // no lang filter
-    console.log("Fetched transcript in fallback language.");
-    return transcriptArr.map((item) => item.text).join("\n");
+    console.log(`[Transcript] Attempting to fetch transcript in default language for ID: ${videoId}...`);
+    const transcriptArr = await YoutubeTranscript.fetchTranscript(videoId);
+    console.log("[Transcript] Successfully fetched default language transcript locally.");
+    const fullText = transcriptArr.map((item) => item.text).join(" ");
+    return decodeHtmlEntities(fullText);
   } catch (localAnyError) {
-    console.log(`Local fallback fetch also failed. Reason: ${localAnyError.message}`);
+    console.log(`[Transcript] Local fallback fetch failed: ${localAnyError.message}`);
   }
 
-  // Step 3: Try Apify as last resort
   if (!process.env.APIFY_API_TOKEN) {
-    throw new Error("Transcript not available and Apify token is missing.");
+    throw new Error("Transcript not available locally, and APIFY_API_TOKEN is not configured.");
   }
 
   try {
-    console.log("Using Apify API to fetch transcript...");
+    console.log(`[Transcript] Using Apify actor to scrape transcript for: ${standardUrl}`);
 
     const input = {
       youtube_url: standardUrl,
@@ -48,20 +68,51 @@ export const getTranscript = async (videoUrl) => {
     const { items } = await client.dataset(run.defaultDatasetId).listItems();
 
     if (items && items.length > 0) {
-      const fullText = items
+      const scrapedText = items
         .map((item) => item.transcript_text || item.text || item.transcript || item.translatedText || "")
         .filter(Boolean)
-        .join("\n");
+        .join(" ");
 
-      if (fullText.trim()) {
-        console.log("Apify transcript fetch successful.");
-        return fullText;
+      const cleanedText = decodeHtmlEntities(scrapedText).trim();
+      if (cleanedText) {
+        console.log("[Transcript] Apify transcript fetch successful.");
+        return cleanedText;
       }
     }
 
-    throw new Error("Apify returned empty transcript.");
+    throw new Error("Apify run finished but returned no transcript items.");
   } catch (apifyError) {
-    console.error(`Apify failed: ${apifyError.message}`);
-    throw new Error(`Could not fetch transcript via any method. Last error: ${apifyError.message}`);
+    console.error(`[Transcript] Apify failed: ${apifyError.message}`);
+    throw new Error(`Failed to retrieve transcript. Checked locally and via Apify. Error: ${apifyError.message}`);
   }
+};
+
+export const getRepresentativeTranscript = (transcript, maxChars = 12000) => {
+  if (!transcript) return "";
+  
+  const cleaned = transcript.trim();
+  if (cleaned.length <= maxChars) {
+    return cleaned;
+  }
+
+  const numSegments = 6;
+  const segmentLength = Math.floor(maxChars / numSegments);
+  const totalLength = cleaned.length;
+  const segments = [];
+
+  for (let i = 0; i < numSegments; i++) {
+    const startRatio = i / numSegments;
+    const startIdx = Math.floor(totalLength * startRatio);
+    let chunk = cleaned.substring(startIdx, Math.min(startIdx + segmentLength, totalLength));
+
+    const firstSpace = chunk.indexOf(" ");
+    const lastSpace = chunk.lastIndexOf(" ");
+    if (firstSpace !== -1 && lastSpace !== -1 && lastSpace > firstSpace) {
+      chunk = chunk.substring(firstSpace + 1, lastSpace);
+    }
+
+    segments.push(`[Section ${i + 1} of Video transcript]:\n... ${chunk.trim()} ...`);
+  }
+
+  return segments.join("\n\n");
 };
