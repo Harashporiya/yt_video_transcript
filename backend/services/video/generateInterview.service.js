@@ -26,8 +26,16 @@ export const generateInterviewService = async (videoId, userId) => {
     const parsedQuestions = await generateQuestions(transcript);
 
 
-    const savedQuestions = await prisma.videoQuestion.create({
-        data: {
+    const savedQuestions = await prisma.videoQuestion.upsert({
+        where: {
+            userId_videoRefId: { userId, videoRefId: video.id },
+        },
+        update: {
+            easyQuestions: JSON.stringify(parsedQuestions.easyQuestions),
+            mediumQuestions: JSON.stringify(parsedQuestions.mediumQuestions),
+            hardQuestions: JSON.stringify(parsedQuestions.hardQuestions),
+        },
+        create: {
             userId,
             videoRefId: video.id,
             easyQuestions: JSON.stringify(parsedQuestions.easyQuestions),
