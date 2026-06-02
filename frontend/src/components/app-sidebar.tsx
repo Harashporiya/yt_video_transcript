@@ -39,7 +39,7 @@ import { useVideoContext } from "@/lib/video-context"
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession()
   const router = useRouter()
-  const { videos, refreshVideos, isLoading } = useVideoContext()
+  const { videos, refreshVideos, isLoading, setSuccessMessage } = useVideoContext()
   const [userProfile, setUserProfile] = useState<any>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -78,6 +78,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       // Refresh list from server after delete
       await refreshVideos();
       setConfirmDeleteId(null);
+      setSuccessMessage("Video deleted successfully!");
 
       const currentUrl = new URL(window.location.href);
       if (currentUrl.searchParams.get("v") === videoId) {
