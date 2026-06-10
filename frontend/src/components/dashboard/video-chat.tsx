@@ -315,6 +315,15 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
                         }}
                     />
                     <div className="flex items-center justify-between mt-2">
+                        <div className="flex items-center gap-2 px-1">
+                            <div className={`w-1.5 h-1.5 rounded-full ${chatLimitReached ? 'bg-amber-500' : 'bg-green-500 animate-pulse'}`} />
+                            <span className="text-[11px] font-semibold tracking-wider uppercase text-white/30">
+                                {chatLimitReached ? 'Limit Reached' : 'AI Ready'}
+                            </span>
+                            {!chatLimitReached && (
+                                <span className="text-[10px] text-white/20 hidden sm:inline">· Enter to send</span>
+                            )}
+                        </div>
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={askQuestion}
