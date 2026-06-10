@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -12,10 +13,18 @@ model User {
   password  String
   name      String
   createdAt DateTime @default(now())
-  video Video[]
-  summaries VideoSummary[]
-  questions VideoQuestion[]
+
+  plan             String    @default("free")
+  planExpiry       DateTime?               
+  videosUsedThisMonth Int    @default(0)
+  videosResetAt    DateTime?
+  razorpaySubId    String?
+
+  video        Video[]
+  summaries    VideoSummary[]
+  questions    VideoQuestion[]
   chatMessages ChatMessage[]
+  paymentOrders PaymentOrder[]
 }
 
 model Video{
@@ -84,4 +93,23 @@ model ChatMessage {
 
   @@index([userId])
   @@index([videoRefId])
+}
+
+model PaymentOrder {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  razorpayOrderId String   @unique          
+  paymentId       String?  @unique          
+  signature       String?                  
+  amount          Int                      
+  currency        String   @default("INR")
+  plan            String                   
+  status          String   @default("pending") 
+  usedAt          Boolean  @default(false)  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([razorpayOrderId])
 }
