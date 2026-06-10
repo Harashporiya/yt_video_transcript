@@ -21,7 +21,9 @@ import {
   SidebarSimpleIcon,
   TrashIcon,
   DotsThreeIcon,
-  SignOutIcon
+  SignOutIcon,
+  CrownSimpleIcon,
+  LightningIcon,
 } from "@phosphor-icons/react"
 import {
   DropdownMenu,
@@ -34,16 +36,21 @@ import axios from "axios"
 import { useRouter } from "next/navigation"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { InfoIcon } from "@phosphor-icons/react"
-import { useVideoContext } from "@/lib/video-context"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import { fetchVideos, setSuccessMessage } from "@/store/slices/videoSlice"
+import { usePlanStatus } from "@/hooks/usePlanStatus"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession()
   const router = useRouter()
-  const { videos, refreshVideos, isLoading, setSuccessMessage } = useVideoContext()
+  const dispatch = useAppDispatch()
+  const { videos, isLoading, successMessage } = useAppSelector((s) => s.video)
   const [userProfile, setUserProfile] = useState<any>(null)
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  // const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
+  const { isPro, loading: planLoading } = usePlanStatus()
+
 
   // Load videos + profile on mount
   useEffect(() => {
@@ -53,8 +60,8 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       return;
     }
 
-    // Load videos via context
-    refreshVideos();
+    // Load videos via Redux
+    dispatch(fetchVideos(token));
 
     // Load user profile
     axios.get(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/profile`, {
@@ -65,31 +72,31 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
-  const executeDelete = async (videoId: string) => {
-    const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
-    if (!token) return;
-
-    setError(null);
-    try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/youtube/delete/${videoId}`, {
-        headers: { Authorization: token }
-      });
-
-      // Refresh list from server after delete
-      await refreshVideos();
-      setConfirmDeleteId(null);
-      setSuccessMessage("Video deleted successfully!");
-
-      const currentUrl = new URL(window.location.href);
-      if (currentUrl.searchParams.get("v") === videoId) {
-        router.push('/dashboard');
-      }
-    } catch (err: any) {
-      console.error("Failed to delete video:", err);
-      setError("Failed to delete video");
-      setTimeout(() => setError(null), 3000);
-    }
-  }
+  // const executeDelete = async (videoId: string) => {
+  //   const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
+  //   if (!token) return;
+  //
+  //   setError(null);
+  //   try {
+  //     await axios.delete(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/youtube/delete/${videoId}`, {
+  //       headers: { Authorization: token }
+  //     });
+  //
+  //     // Refresh list from server after delete
+  //     await refreshVideos();
+  //     setConfirmDeleteId(null);
+  //     setSuccessMessage("Video deleted successfully!");
+  //
+  //     const currentUrl = new URL(window.location.href);
+  //     if (currentUrl.searchParams.get("v") === videoId) {
+  //       router.push('/dashboard');
+  //     }
+  //   } catch (err: any) {
+  //     console.error("Failed to delete video:", err);
+  //     setError("Failed to delete video");
+  //     setTimeout(() => setError(null), 3000);
+  //   }
+  // }
 
   const loading = isLoading || profileLoading;
 
@@ -156,9 +163,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     className="hover:bg-white/5 hover:text-white text-white/80 text-sm h-9 rounded-lg font-medium flex items-center gap-2.5 cursor-pointer group relative"
                   >
                     <VideoCameraIcon size={16} className="shrink-0 text-red-400" />
-                    <span className="truncate flex-1 text-left pr-6">{v.title || v.videoId}</span>
+                    <span className="truncate flex-1 text-left">{v.title || v.videoId}</span>
 
-                    <div className="absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+                    {/* Delete button commented out as requested */}
+                    {/* <div className="absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
                         <DropdownMenuTrigger asChild>
                           <div role="button" className="p-1 hover:text-white text-white/50 rounded-md hover:bg-white/10 z-10 flex items-center justify-center cursor-pointer">
@@ -206,7 +214,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </div>
+                    </div> */}
                   </SidebarMenuButton>
                 ))
               )}
@@ -215,7 +223,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="!bg-black p-3 pb-4 border-t border-white/10">
+      <SidebarFooter className="!bg-black p-3 pb-4 border-t border-white/10 flex flex-col gap-3">
+        {/* Upgrade Banner for Free Users */}
+        {!planLoading && !isPro && (
+          <div className="bg-gradient-to-br from-violet-500/10 to-amber-500/10 border border-violet-500/20 rounded-xl p-3.5 flex flex-col gap-2.5 animate-in slide-in-from-bottom-2 duration-300">
+            <div className="flex gap-2">
+              <CrownSimpleIcon size={18} className="text-amber-400 shrink-0" weight="fill" />
+              <div className="flex flex-col gap-0.5">
+                <span className="text-[11px] font-bold text-amber-400 tracking-wider uppercase">Upgrade to Pro</span>
+                <span className="text-[11px] text-white/50 leading-normal">
+                  Unlock more videos, higher chat limits & priority support.
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => router.push("/pricing")}
+              className="w-full bg-violet-500 hover:bg-violet-400 text-white font-bold text-xs py-2 rounded-lg transition-colors shadow-sm"
+            >
+              Get Pro for ₹199
+            </button>
+          </div>
+        )}
+
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
@@ -232,12 +261,26 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       </>
                     ) : (
                       <>
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f97316] text-white font-bold text-sm shadow-sm">
+                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f97316] text-white font-bold text-sm shadow-sm relative">
                           {(session?.user?.name || userProfile?.name || "U")[0]?.toUpperCase()}
+                          {isPro && (
+                            <span className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 border border-black shadow">
+                              <CrownSimpleIcon size={8} className="text-black" weight="fill" />
+                            </span>
+                          )}
                         </div>
                         <div className="flex flex-col flex-1 overflow-hidden text-left">
-                          <span className="text-sm font-semibold text-white/90 truncate">{session?.user?.name || userProfile?.name || "User"}</span>
-                          <span className="text-xs text-white/50 font-medium truncate">{session?.user?.email || userProfile?.email || "Free Plan"}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-sm font-semibold text-white/90 truncate">{session?.user?.name || userProfile?.name || "User"}</span>
+                            {isPro && (
+                              <span className="bg-amber-500/10 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20 uppercase shrink-0">
+                                Pro
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-white/50 font-medium truncate">
+                            {session?.user?.email || userProfile?.email}
+                          </span>
                         </div>
                       </>
                     )}
@@ -245,6 +288,23 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-[240px] bg-[#0a0a0a] border-white/10 text-white rounded-xl shadow-xl p-1 mb-2">
+                <DropdownMenuItem
+                  className="text-white/70 focus:text-white focus:bg-white/10 cursor-pointer flex items-center gap-2.5 rounded-lg font-medium py-2 px-2.5"
+                  onClick={() => router.push("/pricing")}
+                >
+                  {isPro ? (
+                    <>
+                      <CrownSimpleIcon size={16} className="text-amber-400" weight="fill" />
+                      Manage Plan
+                    </>
+                  ) : (
+                    <>
+                      <LightningIcon size={16} className="text-violet-400" weight="fill" />
+                      Upgrade Plan
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <div className="h-px bg-white/10 my-1"></div>
                 <DropdownMenuItem
                   className="text-white/70 focus:text-white focus:bg-white/10 cursor-pointer flex items-center gap-2.5 rounded-lg font-medium py-2 px-2.5"
                   onClick={() => {
