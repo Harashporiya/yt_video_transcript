@@ -11,12 +11,15 @@ import {
     LockSimpleIcon,
 } from "@phosphor-icons/react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { useVideoContext } from "@/lib/video-context"
+import { useAppDispatch } from "@/store/hooks"
+import { fetchVideos, setSuccessMessage } from "@/store/slices/videoSlice"
+import { usePlanStatus } from "@/hooks/usePlanStatus"
 
 export function VideoProcessor() {
     const { data: session } = useSession()
     const router = useRouter()
-    const { refreshVideos, setSuccessMessage } = useVideoContext()
+    const dispatch = useAppDispatch()
+    const { isPro } = usePlanStatus()
 
     const [videoUrl, setVideoUrl] = useState("")
     const [loading, setLoading] = useState(false)
@@ -48,11 +51,9 @@ export function VideoProcessor() {
                 headers: { Authorization: token }
             });
 
+            await dispatch(fetchVideos(token));
 
-            await refreshVideos();
-
-
-            setSuccessMessage("Video processed successfully! You can now chat, summarize, and generate interview questions.");
+            dispatch(setSuccessMessage("Video processed successfully! You can now chat, summarize, and generate interview questions."));
 
             router.push(`?v=${vId}`);
             setVideoUrl("");
@@ -82,13 +83,24 @@ export function VideoProcessor() {
                             <div className="flex-1">
                                 <p className="text-amber-400 font-semibold text-sm">Video Limit Reached</p>
                                 <p className="text-amber-400/70 text-xs mt-0.5 leading-relaxed">
-                                    You have hit your video limit. You can only upload <span className="font-bold text-amber-400">1 video</span> — no more uploads allowed.
+                                    {isPro
+                                        ? "You have reached your Pro plan video limit for this month. Your usage limits will reset at the start of your next billing cycle."
+                                        : "You have hit your free plan limit. Upgrade to Pro for more videos and chats."}
                                 </p>
+                                {!isPro && (
+                                    <button
+                                        onClick={() => router.push('/pricing')}
+                                        className="mt-2 text-xs bg-amber-500 hover:bg-amber-400 text-black font-bold px-3 py-1.5 rounded-lg transition-colors"
+                                    >
+                                        Upgrade to Pro →
+                                    </button>
+                                )}
                             </div>
                             <button onClick={() => setLimitReached(false)} className="text-amber-400/50 hover:text-amber-400 transition-colors shrink-0 text-lg leading-none">&times;</button>
                         </div>
                     </div>
                 )}
+
 
                 {/* Generic Error */}
                 {error && (
