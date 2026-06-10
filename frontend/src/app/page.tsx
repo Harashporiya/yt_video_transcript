@@ -25,6 +25,9 @@ export default function Home() {
             <span className="font-semibold text-lg tracking-tight">Transcripter</span>
           </div>
           <nav className="flex items-center gap-6">
+            <Link href="#pricing" className="text-sm font-medium text-gray-400 hover:text-white transition-colors hidden sm:block">
+              Pricing
+            </Link>
             <Link href="/login" className="text-sm font-medium text-gray-400 hover:text-white transition-colors hidden sm:block">
               Log in
             </Link>
@@ -36,6 +39,7 @@ export default function Home() {
           </nav>
         </div>
       </header>
+
 
       {/* Hero Section */}
       <section className="relative pt-40 pb-20 md:pt-52 md:pb-32 overflow-hidden">
@@ -212,6 +216,184 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Pricing Section ─────────────────────────────────────────── */}
+      <section id="pricing" className="py-32 border-t border-white/10 bg-[#020202] relative overflow-hidden">
+        {/* Ambient glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
+
+          {/* Heading */}
+          <div className="text-center mb-16 max-w-2xl mx-auto">
+            <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 rounded-full px-4 py-1.5 text-violet-400 text-xs font-semibold mb-6 tracking-wider uppercase">
+              ✦ Simple Pricing
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-5">
+              Start free.{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-amber-400">
+                Upgrade anytime.
+              </span>
+            </h2>
+            <p className="text-gray-400 text-lg font-light">
+              No hidden fees. Cancel whenever you want.
+            </p>
+          </div>
+
+          {/* Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+
+            {/* ── Free Plan ── */}
+            <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-8 flex flex-col">
+              <div className="mb-8">
+                <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">Free</p>
+                <div className="flex items-end gap-1 mb-1">
+                  <span className="text-5xl font-bold text-white">₹0</span>
+                </div>
+                <p className="text-gray-500 text-sm mt-2">Forever free, no card needed</p>
+              </div>
+
+              {/* Features */}
+              <ul className="flex-1 space-y-4 mb-10">
+                {[
+                  { text: "1 video total", included: true },
+                  { text: "3 chat messages / video", included: true },
+                  { text: "AI Summary", included: true },
+                  { text: "Interview Questions", included: true },
+                  { text: "More videos", included: false },
+                  { text: "Unlimited chats", included: false },
+                  { text: "Priority support", included: false },
+                ].map((f) => (
+                  <li key={f.text} className="flex items-center gap-3 text-sm">
+                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${f.included ? "bg-white/10 text-white" : "bg-white/5 text-white/20"}`}>
+                      {f.included ? "✓" : "✕"}
+                    </span>
+                    <span className={f.included ? "text-gray-300" : "text-gray-600"}>{f.text}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Link href="/signup">
+                <Button className="w-full h-12 rounded-xl border border-white/10 bg-transparent hover:bg-white/5 text-white font-semibold transition-colors">
+                  Start for free
+                </Button>
+              </Link>
+            </div>
+
+            {/* ── Pro Monthly — Recommended ── */}
+            <div className="rounded-3xl border border-amber-500/30 bg-gradient-to-b from-amber-500/10 to-transparent p-8 flex flex-col relative">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-amber-500 text-black text-[11px] font-bold px-4 py-1.5 rounded-full tracking-widest uppercase shadow-lg shadow-amber-500/30">
+                Most Popular
+              </div>
+
+              <div className="mb-8">
+                <p className="text-sm font-semibold text-amber-400 uppercase tracking-wider mb-3">Pro Monthly</p>
+                <div className="flex items-end gap-1 mb-1">
+                  <span className="text-5xl font-bold text-white">₹199</span>
+                  <span className="text-gray-400 text-sm mb-2">/month</span>
+                </div>
+                <p className="text-gray-500 text-sm mt-2">Perfect for regular learners</p>
+              </div>
+
+              <ul className="flex-1 space-y-4 mb-10">
+                {[
+                  "5 videos per month",
+                  "15 chat messages / video",
+                  "AI Summary",
+                  "Interview Questions",
+                  "Priority support",
+                ].map((f) => (
+                  <li key={f} className="flex items-center gap-3 text-sm">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-400 text-[11px] font-bold">✓</span>
+                    <span className="text-gray-200">{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Link href="/signup">
+                <Button className="w-full h-12 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-amber-500/20">
+                  Get Pro Monthly
+                </Button>
+              </Link>
+            </div>
+
+            {/* ── Pro Yearly — Best Value ── */}
+            <div className="rounded-3xl border border-violet-500/30 bg-gradient-to-b from-violet-500/10 to-transparent p-8 flex flex-col relative">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-violet-500 text-white text-[11px] font-bold px-4 py-1.5 rounded-full tracking-widest uppercase shadow-lg shadow-violet-500/30">
+                Save 58%
+              </div>
+
+              <div className="mb-8">
+                <p className="text-sm font-semibold text-violet-400 uppercase tracking-wider mb-3">Pro Yearly</p>
+                <div className="flex items-end gap-1 mb-1">
+                  <span className="text-5xl font-bold text-white">₹999</span>
+                  <span className="text-gray-400 text-sm mb-2">/year</span>
+                </div>
+                <p className="text-gray-500 text-sm mt-2">
+                  <span className="line-through text-gray-600">₹2,388</span>
+                  <span className="text-violet-400 font-semibold ml-2">Best value deal</span>
+                </p>
+              </div>
+
+              <ul className="flex-1 space-y-4 mb-10">
+                {[
+                  "30 videos per year",
+                  "35 chat messages / video",
+                  "AI Summary",
+                  "Interview Questions",
+                  "Priority support",
+                  "Early access to new features",
+                ].map((f) => (
+                  <li key={f} className="flex items-center gap-3 text-sm">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-violet-400 text-[11px] font-bold">✓</span>
+                    <span className="text-gray-200">{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Link href="/signup">
+                <Button className="w-full h-12 rounded-xl bg-violet-500 hover:bg-violet-400 text-white font-bold transition-all hover:scale-[1.02] active:scale-95 shadow-lg shadow-violet-500/20">
+                  Get Pro Yearly
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* Comparison table — what's in free vs pro */}
+          <div className="mt-20 rounded-3xl border border-white/10 bg-white/[0.01] overflow-hidden">
+            <div className="grid grid-cols-4 gap-0 text-sm">
+              {/* Header */}
+              <div className="p-6 border-b border-white/10 text-gray-500 font-semibold uppercase tracking-wider text-xs">Feature</div>
+              <div className="p-6 border-b border-l border-white/10 text-center font-semibold text-white/50">Free</div>
+              <div className="p-6 border-b border-l border-white/10 text-center font-semibold text-amber-400 bg-amber-500/5">Pro Monthly</div>
+              <div className="p-6 border-b border-l border-white/10 text-center font-semibold text-violet-400 bg-violet-500/5">Pro Yearly</div>
+
+              {/* Rows */}
+              {[
+                { feature: "Videos processed", free: "1 total", monthly: "5 / month", yearly: "30 / year" },
+                { feature: "Chat messages", free: "3 / video", monthly: "15 / video", yearly: "35 / video" },
+                { feature: "AI Summary", free: "✓", monthly: "✓", yearly: "✓" },
+                { feature: "Interview Questions", free: "✓", monthly: "✓", yearly: "✓" },
+                { feature: "Video length", free: "Short videos", monthly: "Up to 1 hr", yearly: "Any length" },
+                { feature: "Priority support", free: "—", monthly: "✓", yearly: "✓" },
+                { feature: "Early features", free: "—", monthly: "—", yearly: "✓" },
+              ].map((row, i) => (
+                <div key={row.feature} className={`contents ${i % 2 === 0 ? "" : "bg-white/[0.01]"}`}>
+                  <div className="p-5 border-b border-white/5 text-gray-400 font-medium">{row.feature}</div>
+                  <div className="p-5 border-b border-l border-white/5 text-center text-gray-500">{row.free}</div>
+                  <div className="p-5 border-b border-l border-white/5 text-center text-gray-200 bg-amber-500/[0.03]">{row.monthly}</div>
+                  <div className="p-5 border-b border-l border-white/5 text-center text-gray-200 bg-violet-500/[0.03]">{row.yearly}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Security note */}
+          <p className="text-center text-gray-600 text-xs mt-8">
+            🔒 Payments secured by Razorpay · No card stored · Cancel anytime
+          </p>
+        </div>
+      </section>
+
       {/* CTA Section */}
       <section className="py-32 border-t border-white/10 bg-[#020202] relative">
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[50%] bg-gradient-to-t from-white/[0.02] to-transparent pointer-events-none" />
@@ -233,6 +415,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+
 
       {/* Footer */}
       <footer className="py-12 border-t border-white/10 text-gray-500 text-sm bg-black">
