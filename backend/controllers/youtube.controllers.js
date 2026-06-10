@@ -3,6 +3,43 @@ import { processVideoService } from '../services/video/processVideo.service.js';
 import { askQuestionService } from '../services/video/askQuestion.service.js';
 import { deleteVideoService } from '../services/video/deleteVideo.service.js';
 import { generateInterviewService } from '../services/video/generateInterview.service.js';
+import { PLANS, FREE_LIMITS } from '../config/plans.config.js';
+
+async function getPlanLimits(userId) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { plan: true, planExpiry: true, razorpaySubId: true },
+  });
+
+  if (!user) {
+    return {
+      videoLimit: FREE_LIMITS.videoLimit,
+      chatLimit: FREE_LIMITS.chatLimit,
+      isPro: false
+    };
+  }
+
+  const isPro = user.plan === 'pro' && (!user.planExpiry || user.planExpiry > new Date());
+
+  // Auto-downgrade expired pro plan
+  if (user.plan === 'pro' && user.planExpiry && user.planExpiry <= new Date()) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { plan: 'free', planExpiry: null, razorpaySubId: null }
+    });
+  }
+
+  const planType = user.razorpaySubId || 'monthly';
+  const limits = isPro && PLANS[planType] ? PLANS[planType] : FREE_LIMITS;
+
+  return {
+    isPro,
+    videoLimit: limits.videoLimit,
+    chatLimit: limits.chatLimit,
+  };
+}
+
+
 
 export const processVideoController = async (req, res) => {
   try {
@@ -16,16 +53,30 @@ export const processVideoController = async (req, res) => {
     }
 
 
+    const { videoLimit, isPro } = await getPlanLimits(req.user.userId);
+
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { videosUsedThisMonth: true },
+    });
+
     const existingVideoCount = await prisma.video.count({
       where: { userId: req.user.userId },
     });
 
-    if (existingVideoCount >= 1) {
+    const currentUsage = isPro ? (user?.videosUsedThisMonth || 0) : existingVideoCount;
+
+    if (currentUsage >= videoLimit) {
       return res.status(403).json({
         success: false,
-        message: "Video upload limit reached. You can only upload 1 video. Please delete the existing video to upload a new one.",
+        message: isPro
+          ? `Video limit reached. Pro plan allows ${videoLimit} videos/month.`
+          : `Free plan allows only ${videoLimit} video. Upgrade to Pro for more!`,
         limitReached: true,
         limitType: "video",
+        currentCount: currentUsage,
+        maxLimit: videoLimit,
+        isPro,
       });
     }
 
@@ -65,7 +116,7 @@ export const askQuestionController = async (req, res) => {
     }
 
 
-    const CHAT_LIMIT = 3;
+    const { chatLimit, isPro } = await getPlanLimits(userId);
     const video = await prisma.video.findUnique({
       where: { namespace: `${userId}-${videoId}` },
     });
@@ -79,14 +130,17 @@ export const askQuestionController = async (req, res) => {
         },
       });
 
-      if (userMessageCount >= CHAT_LIMIT) {
+      if (userMessageCount >= chatLimit) {
         return res.status(403).json({
           success: false,
-          message: `Chat limit reached. You can only send ${CHAT_LIMIT} messages per video.`,
+          message: isPro
+            ? `Chat limit reached. Pro plan allows ${chatLimit} messages per video.`
+            : `Free plan allows only ${chatLimit} messages per video. Upgrade to Pro!`,
           limitReached: true,
           limitType: "chat",
           currentCount: userMessageCount,
-          maxLimit: CHAT_LIMIT,
+          maxLimit: chatLimit,
+          isPro,
         });
       }
     }
@@ -297,7 +351,7 @@ export const saveChatMessageController = async (req, res) => {
     }
 
 
-    const CHAT_LIMIT = 3;
+    const { chatLimit, isPro } = await getPlanLimits(userId);
     if (role === "user") {
       const userMessageCount = await prisma.chatMessage.count({
         where: {
@@ -307,14 +361,17 @@ export const saveChatMessageController = async (req, res) => {
         },
       });
 
-      if (userMessageCount >= CHAT_LIMIT) {
+      if (userMessageCount >= chatLimit) {
         return res.status(403).json({
           success: false,
-          message: `Chat limit reached. You can only send ${CHAT_LIMIT} messages per video.`,
+          message: isPro
+            ? `Chat limit reached. Pro plan allows ${chatLimit} messages per video.`
+            : `Free plan allows only ${chatLimit} messages per video. Upgrade to Pro!`,
           limitReached: true,
           limitType: "chat",
           currentCount: userMessageCount,
-          maxLimit: CHAT_LIMIT,
+          maxLimit: chatLimit,
+          isPro,
         });
       }
     }
