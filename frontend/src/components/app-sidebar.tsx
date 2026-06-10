@@ -69,7 +69,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }).then(res => {
       if (res.data.success) setUserProfile(res.data.user);
     }).catch(console.error).finally(() => setProfileLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session])
 
   // const executeDelete = async (videoId: string) => {
