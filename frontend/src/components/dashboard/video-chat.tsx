@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import axios from "axios"
 import {
     YoutubeLogoIcon,
@@ -8,10 +8,12 @@ import {
     ArrowUpIcon,
     SpinnerGapIcon,
     ChatCircleTextIcon,
-    ChatTeardropTextIcon
+    ChatTeardropTextIcon,
+    CrownSimpleIcon,
 } from "@phosphor-icons/react"
 import { SummaryView } from "./summary-view"
 import { InterviewView } from "./interview-view"
+import { usePlanStatus } from "@/hooks/usePlanStatus"
 
 interface VideoChatProps {
     activeVideoId: string
@@ -20,20 +22,29 @@ interface VideoChatProps {
 export function VideoChat({ activeVideoId }: VideoChatProps) {
     const { data: session, status } = useSession()
     const searchParams = useSearchParams()
+    const router = useRouter()
     const action = searchParams.get("action")
+    const { isPro, limits, loading: planLoading, planStatus } = usePlanStatus()
+    const CHAT_LIMIT = limits.chatLimit 
 
     const [question, setQuestion] = useState("")
     const [chatHistory, setChatHistory] = useState<{ role: string, text: string }[]>([])
     const [chatLoading, setChatLoading] = useState(false)
     const [chatLimitReached, setChatLimitReached] = useState(false)
     const [chatCount, setChatCount] = useState(0)
-    const CHAT_LIMIT = 3
 
     const [view, setView] = useState<'chat' | 'summary' | 'interview'>('chat')
     const [summaryData, setSummaryData] = useState<any>(null)
     const [summaryLoading, setSummaryLoading] = useState(false)
     const [interviewData, setInterviewData] = useState<any>(null)
     const [interviewLoading, setInterviewLoading] = useState(false)
+
+
+    useEffect(() => {
+        if (planStatus !== null) {
+            setChatLimitReached(chatCount >= CHAT_LIMIT);
+        }
+    }, [CHAT_LIMIT, chatCount, planStatus]);
 
     useEffect(() => {
         setQuestion("");
@@ -58,7 +69,6 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
 
                         const userMsgCount = res.data.chatHistory.filter((m: any) => m.role === 'user').length;
                         setChatCount(userMsgCount);
-                        if (userMsgCount >= 3) setChatLimitReached(true);
                     } else {
                         setChatHistory([]);
                     }
@@ -143,7 +153,6 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
             setChatHistory(prev => [...prev, { role: "ai", text: res.data.answer }]);
             const newCount = chatCount + 1;
             setChatCount(newCount);
-            if (newCount >= CHAT_LIMIT) setChatLimitReached(true);
         } catch (error: any) {
             console.error(error);
             if (error?.response?.data?.limitReached) {
@@ -210,7 +219,7 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
                         }}
                         className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${view === 'interview' ? 'bg-white/10 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}
                     >
-                        <ChatCircleTextIcon size={18} className={view === 'interview' ? 'text-blue-400' : ''} /> Interview Questions
+                        <ChatCircleTextIcon size={18} className={view === 'interview' ? 'text-blue-400' : ''} /> Interview & Q&A
                     </button>
                 </div>
             )}
@@ -230,7 +239,7 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
                                 <ListBulletsIcon size={18} className="text-emerald-400" /> Show Summary
                             </button>
                             <button onClick={() => { setView('interview'); generateSummary(); }} className="px-5 py-2.5 bg-white/5 hover:bg-white/10 hover:text-white rounded-xl transition-colors border border-white/10 text-sm flex items-center gap-2 font-medium">
-                                <ChatCircleTextIcon size={18} className="text-blue-400" /> Interview Questions
+                                <ChatCircleTextIcon size={18} className="text-blue-400" /> Interview & Q&A
                             </button>
                         </div>
                     </div>
@@ -265,18 +274,29 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
                         <div className="flex-1">
                             <p className="text-amber-400 font-semibold text-xs">Chat Limit Reached</p>
                             <p className="text-amber-400/70 text-xs leading-relaxed">
-                                You have hit your chat limit. Only <span className="font-bold text-amber-400">3 messages</span> are allowed — no more messages can be sent.
+                                {isPro
+                                    ? <>You have used all <span className="font-bold text-amber-400">{CHAT_LIMIT} messages</span> for this video on your Pro plan.</>
+                                    : <>Free plan allows only <span className="font-bold text-amber-400">3 messages</span> per video. Upgrade for more!</>}
                             </p>
+                            {!isPro && (
+                                <button
+                                    onClick={() => router.push('/pricing')}
+                                    className="mt-1.5 flex items-center gap-1.5 text-[11px] bg-violet-500 hover:bg-violet-400 text-white font-bold px-2.5 py-1 rounded-lg transition-colors"
+                                >
+                                    <CrownSimpleIcon size={12} weight="fill" />
+                                    Upgrade to Pro
+                                </button>
+                            )}
                         </div>
                     </div>
                 )}
 
-                {/* Messages remaining indicator */}
-                {!chatLimitReached && chatCount > 0 && (
+                {!chatLimitReached && chatCount > 0 && CHAT_LIMIT < 999999 && (
                     <div className="mb-2 flex justify-end">
                         <span className="text-white/30 text-xs">{CHAT_LIMIT - chatCount} message{CHAT_LIMIT - chatCount !== 1 ? 's' : ''} remaining</span>
                     </div>
                 )}
+
 
                 <div className={`bg-[#0a0a0a] rounded-[24px] flex flex-col p-3 shadow-lg border transition-colors ${chatLimitReached ? 'border-amber-500/20 opacity-50' : 'border-white/5 focus-within:border-white/20'
                     }`}>
@@ -295,9 +315,6 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
                         }}
                     />
                     <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-1">
-                            {/* Paperclip icon removed as requested */}
-                        </div>
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={askQuestion}
