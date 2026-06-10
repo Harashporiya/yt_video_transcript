@@ -70,7 +70,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       if (res.data.success) setUserProfile(res.data.user);
     }).catch(console.error).finally(() => setProfileLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session])
+  }, [])
 
   // const executeDelete = async (videoId: string) => {
   //   const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
