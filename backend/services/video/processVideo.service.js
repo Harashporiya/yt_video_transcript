@@ -61,6 +61,15 @@ export const processVideoService = async (videoUrl, userId) => {
     },
   });
 
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      videosUsedThisMonth: {
+        increment: 1,
+      },
+    },
+  });
+
   await prisma.videoSummary.create({
     data: {
       userId,
