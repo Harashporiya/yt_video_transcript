@@ -80,10 +80,13 @@ export const getTranscript = async (videoUrl) => {
       }
     }
 
-    throw new Error("Apify run finished but returned no transcript items.");
+    throw new Error("No transcript is available for this video on YouTube. Please check if captions/subtitles are enabled on this video.");
   } catch (apifyError) {
     console.error(`[Transcript] Apify failed: ${apifyError.message}`);
-    throw new Error(`Failed to retrieve transcript. Checked locally and via Apify. Error: ${apifyError.message}`);
+    const friendlyMessage = apifyError.message.includes("no transcript") 
+      ? "No transcript is available for this video on YouTube. Please try a video with captions/subtitles enabled."
+      : `Failed to retrieve transcript. Checked locally and via Apify. Error: ${apifyError.message}`;
+    throw new Error(friendlyMessage);
   }
 };
 
