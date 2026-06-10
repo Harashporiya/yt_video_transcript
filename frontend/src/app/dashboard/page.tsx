@@ -12,21 +12,24 @@ import {
     YoutubeLogoIcon,
     SpinnerGapIcon,
     CheckCircleIcon,
+    VideoCameraIcon,
 } from "@phosphor-icons/react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { isTokenValid } from "@/lib/utils"
-import { VideoProvider, useVideoContext } from "@/lib/video-context"
+import { useAppDispatch, useAppSelector } from "@/store/hooks"
+import { setSuccessMessage } from "@/store/slices/videoSlice"
 
 function SuccessToast() {
-    const { successMessage, setSuccessMessage } = useVideoContext()
+    const dispatch = useAppDispatch()
+    const successMessage = useAppSelector((s) => s.video.successMessage)
 
     useEffect(() => {
         if (successMessage) {
-            const timer = setTimeout(() => setSuccessMessage(null), 4000)
+            const timer = setTimeout(() => dispatch(setSuccessMessage(null)), 4000)
             return () => clearTimeout(timer)
         }
-    }, [successMessage, setSuccessMessage])
+    }, [successMessage, dispatch])
 
     if (!successMessage) return null
 
@@ -43,16 +46,36 @@ function SuccessToast() {
 function DashboardContent() {
     const searchParams = useSearchParams()
     const activeVideoId = searchParams.get("v")
+    const videos = useAppSelector((s) => s.video.videos)
+
+    const activeVideo = videos.find(v => v.videoId === activeVideoId)
+    const activeVideoTitle = activeVideo?.title || activeVideoId
 
     return (
         <SidebarInset className="bg-black text-white flex flex-col h-screen overflow-hidden">
             <header className="flex h-14 shrink-0 items-center justify-between gap-2 px-4 bg-black border-b border-white/10">
-                <div className="flex items-center gap-2">
-                    <SidebarTrigger className="text-white hover:bg-white/5 hover:text-white" />
-                    <div className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 hover:text-white rounded-lg cursor-pointer transition-colors text-lg font-semibold text-white/90">
-                        <YoutubeLogoIcon size={24} className="text-white" weight="fill" />
-                        <span>Transcripter</span>
-                    </div>
+                <div className="flex items-center gap-2 min-w-0">
+                    <SidebarTrigger className="text-white hover:bg-white/5 hover:text-white shrink-0" />
+                    {activeVideoId ? (
+                        // Show active video title when chatting
+                        <div className="flex items-center gap-2 min-w-0">
+                            <div className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 hover:text-white rounded-lg cursor-pointer transition-colors text-lg font-semibold text-white/90 shrink-0">
+                                <YoutubeLogoIcon size={22} className="text-white" weight="fill" />
+                            </div>
+                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 min-w-0 max-w-[420px]">
+                                <VideoCameraIcon size={15} className="text-red-400 shrink-0" />
+                                <span className="text-sm font-medium text-white/80 truncate" title={activeVideoTitle ?? ""}>
+                                    {activeVideoTitle}
+                                </span>
+                            </div>
+                        </div>
+                    ) : (
+                        // Default logo when no video selected
+                        <div className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 hover:text-white rounded-lg cursor-pointer transition-colors text-lg font-semibold text-white/90">
+                            <YoutubeLogoIcon size={24} className="text-white" weight="fill" />
+                            <span>Transcripter</span>
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -110,14 +133,12 @@ export default function Page() {
     }
 
     return (
-        <VideoProvider>
+        <SidebarProvider>
             <SuccessToast />
-            <SidebarProvider>
-                <AppSidebar />
-                <Suspense fallback={<div className="bg-black text-white w-full h-screen flex items-center justify-center"><SpinnerGapIcon className="animate-spin" size={32} /></div>}>
-                    <DashboardContent />
-                </Suspense>
-            </SidebarProvider>
-        </VideoProvider>
+            <AppSidebar />
+            <Suspense fallback={<div className="bg-black text-white w-full h-screen flex items-center justify-center"><SpinnerGapIcon className="animate-spin" size={32} /></div>}>
+                <DashboardContent />
+            </Suspense>
+        </SidebarProvider>
     )
 }
