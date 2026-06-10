@@ -42,7 +42,7 @@ export function InterviewView({ data, loading }: { data: any, loading: boolean }
     return (
         <div className="bg-white/5 p-6 rounded-2xl text-white/90 space-y-8">
             <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <span className="text-blue-400">🎯</span> Interview Questions
+                <span className="text-blue-400">🎯</span> Interview & Practice Q&A
             </h3>
             {formatSection("🟢 Easy Questions", easy, "text-green-400")}
             {formatSection("🟡 Medium Questions", medium, "text-yellow-400")}
