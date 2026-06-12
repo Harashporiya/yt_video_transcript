@@ -1,36 +1,11 @@
 "use client"
 
 import React, { useEffect, useState } from "react"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-} from "@/components/ui/sidebar"
-import {
-  YoutubeLogoIcon,
-  PlusIcon,
-  VideoCameraIcon,
-  ClockCounterClockwiseIcon,
-  SidebarSimpleIcon,
-  TrashIcon,
-  DotsThreeIcon,
-  SignOutIcon,
-  CrownSimpleIcon,
-  LightningIcon,
-} from "@phosphor-icons/react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import {Sidebar,SidebarContent,SidebarFooter,SidebarHeader,SidebarMenu,SidebarMenuButton,
+  SidebarMenuItem,SidebarGroup,SidebarGroupLabel,SidebarGroupContent,} from "@/components/ui/sidebar"
+import {YoutubeLogoIcon,PlusIcon,VideoCameraIcon,ClockCounterClockwiseIcon,SidebarSimpleIcon,
+  TrashIcon,DotsThreeIcon,SignOutIcon,CrownSimpleIcon,LightningIcon,} from "@phosphor-icons/react"
+import {DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger,} from "@/components/ui/dropdown-menu"
 import { useSession, signOut } from "next-auth/react"
 import axios from "axios"
 import { useRouter } from "next/navigation"
@@ -52,7 +27,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { isPro, loading: planLoading } = usePlanStatus()
 
 
-  // Load videos + profile on mount
+  
   useEffect(() => {
     const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
     if (!token) {
@@ -69,7 +44,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }).then(res => {
       if (res.data.success) setUserProfile(res.data.user);
     }).catch(console.error).finally(() => setProfileLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // const executeDelete = async (videoId: string) => {

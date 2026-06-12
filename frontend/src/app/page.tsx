@@ -216,7 +216,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Pricing Section ─────────────────────────────────────────── */}
+      {/* ── Pricing Section */}
       <section id="pricing" className="py-32 border-t border-white/10 bg-[#020202] relative overflow-hidden">
         {/* Ambient glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />

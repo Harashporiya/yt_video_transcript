@@ -4,13 +4,7 @@ import { useEffect, useState } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import {
-  fetchPlanStatus,
-  createPaymentOrder,
-  verifyPayment,
-  clearPaymentError,
-  clearSuccessMessage,
-} from "@/store/slices/paymentSlice"
+import {fetchPlanStatus,createPaymentOrder,verifyPayment,clearPaymentError,clearSuccessMessage} from "@/store/slices/paymentSlice"
 import { PricingHeader } from "@/components/pricing/pricing-header"
 import { PricingHero } from "@/components/pricing/pricing-hero"
 import { PricingToast } from "@/components/pricing/pricing-toast"
@@ -36,7 +30,6 @@ export default function PricingPage() {
     (session as any)?.backendToken ||
     (typeof window !== "undefined" ? localStorage.getItem("token") : null)
 
-  // Load Razorpay script dynamically
   useEffect(() => {
     const script = document.createElement("script")
     script.src = "https://checkout.razorpay.com/v1/checkout.js"
@@ -45,12 +38,10 @@ export default function PricingPage() {
     return () => { document.body.removeChild(script) }
   }, [])
 
-  // Fetch plan status on mount
   useEffect(() => {
     if (token) dispatch(fetchPlanStatus(token))
   }, [token, dispatch])
 
-  // Auto-clear messages
   useEffect(() => {
     if (successMessage) {
       const t = setTimeout(() => dispatch(clearSuccessMessage()), 5000)
@@ -70,10 +61,9 @@ export default function PricingPage() {
     setCheckoutLoading(plan)
 
     try {
-      // Step 1: Create order from backend
       const orderResult = await dispatch(createPaymentOrder({ token, plan })).unwrap()
 
-      // Step 2: Open Razorpay checkout
+    
       const options = {
         key: orderResult.keyId,
         amount: orderResult.amount,
@@ -82,7 +72,6 @@ export default function PricingPage() {
         description: orderResult.planLabel,
         order_id: orderResult.orderId,
         handler: async (response: any) => {
-          // Step 3: Verify payment on backend
           await dispatch(
             verifyPayment({
               token,
@@ -92,7 +81,6 @@ export default function PricingPage() {
             })
           ).unwrap()
 
-          // Refresh plan status
           dispatch(fetchPlanStatus(token))
         },
         prefill: {
@@ -129,7 +117,6 @@ export default function PricingPage() {
 
         <PricingToast successMessage={successMessage} error={error} />
 
-        {/* Pricing Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
           <FreePlanCard isPro={isPro} />
 
@@ -145,7 +132,6 @@ export default function PricingPage() {
           ))}
         </div>
 
-        {/* Security Note */}
         <p className="mt-10 text-white/25 text-xs text-center max-w-sm">
           🔒 Payments are secured by Razorpay. We never store your card details.
           Cancel anytime from your account.

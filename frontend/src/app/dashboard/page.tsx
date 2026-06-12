@@ -3,17 +3,8 @@ import React, { Suspense, useEffect, useState } from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { VideoProcessor } from "@/components/dashboard/video-processor"
 import { VideoChat } from "@/components/dashboard/video-chat"
-import {
-    SidebarInset,
-    SidebarProvider,
-    SidebarTrigger,
-} from "@/components/ui/sidebar"
-import {
-    YoutubeLogoIcon,
-    SpinnerGapIcon,
-    CheckCircleIcon,
-    VideoCameraIcon,
-} from "@phosphor-icons/react"
+import {SidebarInset,SidebarProvider,SidebarTrigger} from "@/components/ui/sidebar"
+import {YoutubeLogoIcon,SpinnerGapIcon,CheckCircleIcon,VideoCameraIcon} from "@phosphor-icons/react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { isTokenValid } from "@/lib/utils"
@@ -57,7 +48,6 @@ function DashboardContent() {
                 <div className="flex items-center gap-2 min-w-0">
                     <SidebarTrigger className="text-white hover:bg-white/5 hover:text-white shrink-0" />
                     {activeVideoId ? (
-                        // Show active video title when chatting
                         <div className="flex items-center gap-2 min-w-0">
                             <div className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 hover:text-white rounded-lg cursor-pointer transition-colors text-lg font-semibold text-white/90 shrink-0">
                                 <YoutubeLogoIcon size={22} className="text-white" weight="fill" />
@@ -70,7 +60,6 @@ function DashboardContent() {
                             </div>
                         </div>
                     ) : (
-                        // Default logo when no video selected
                         <div className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 hover:text-white rounded-lg cursor-pointer transition-colors text-lg font-semibold text-white/90">
                             <YoutubeLogoIcon size={24} className="text-white" weight="fill" />
                             <span>Transcripter</span>

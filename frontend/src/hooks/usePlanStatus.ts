@@ -5,13 +5,6 @@ import { useSession } from "next-auth/react"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
 import { fetchPlanStatus } from "@/store/slices/paymentSlice"
 
-/**
- * usePlanStatus — fetches and returns current user plan from Redux.
- * Call this in any component that needs to know plan limits.
- *
- * Usage:
- *   const { isPro, limits, planStatus, loading } = usePlanStatus()
- */
 export function usePlanStatus() {
   const { data: session } = useSession()
   const dispatch = useAppDispatch()
