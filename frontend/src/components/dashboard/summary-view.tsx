@@ -1,17 +1,61 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import axios from 'axios'
 import { SpinnerGapIcon } from "@phosphor-icons/react"
 
-export function SummaryView({ data, loading }: { data: any, loading: boolean }) {
-    if (loading) {
-        return <div className="flex items-center gap-2 text-white/50 p-4"><SpinnerGapIcon className="animate-spin" size={20}/> Generating summary...</div>
+interface SummaryViewProps {
+    activeVideoId: string
+}
+
+export function SummaryView({ activeVideoId }: SummaryViewProps) {
+    const { data: session } = useSession()
+    const [data, setData] = useState<any>(null)
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        if (!activeVideoId) return
+        setData(null)
+        fetchSummary()
+    }, [activeVideoId])
+
+    const fetchSummary = async () => {
+        const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : '')
+        if (!token) return
+
+        setLoading(true)
+        try {
+            const res = await axios.get(
+                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/youtube/summary/${activeVideoId}`,
+                { headers: { Authorization: token } }
+            )
+            const summary = res.data.summary
+            if (!summary) {
+                setData({ error: "Summary not available." })
+                return
+            }
+            setData(summary)
+        } catch (error) {
+            console.error("Error fetching summary:", error)
+            setData({ error: "Error fetching summary. Please make sure the video is processed." })
+        } finally {
+            setLoading(false)
+        }
     }
-    if (!data) return null;
+
+    if (loading) {
+        return (
+            <div className="flex items-center gap-2 text-white/50 p-4">
+                <SpinnerGapIcon className="animate-spin" size={20} /> Generating summary...
+            </div>
+        )
+    }
+    if (!data) return null
     if (data.error) {
         return <div className="p-4 bg-red-500/10 text-red-400 rounded-2xl">{data.error}</div>
     }
 
-    const keypoints = typeof data.keypointSummary === 'string' ? JSON.parse(data.keypointSummary) : data.keypointSummary;
-    const keypointsText = Array.isArray(keypoints) ? keypoints.map((kp: string) => `• ${kp}`).join('\n') : '';
+    const keypoints = typeof data.keypointSummary === 'string' ? JSON.parse(data.keypointSummary) : data.keypointSummary
+    const keypointsText = Array.isArray(keypoints) ? keypoints.map((kp: string) => `• ${kp}`).join('\n') : ''
 
     return (
         <div className="bg-white/5 p-6 rounded-2xl text-white/90 space-y-6">

@@ -1,43 +1,88 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
+import axios from 'axios'
 import { SpinnerGapIcon } from "@phosphor-icons/react"
 
-export function InterviewView({ data, loading }: { data: any, loading: boolean }) {
-    if (loading) {
-        return <div className="flex items-center gap-2 text-white/50 p-4"><SpinnerGapIcon className="animate-spin" size={20}/> Generating interview questions...</div>
+interface InterviewViewProps {
+    activeVideoId: string
+}
+
+export function InterviewView({ activeVideoId }: InterviewViewProps) {
+    const { data: session } = useSession()
+    const [data, setData] = useState<any>(null)
+    const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        if (!activeVideoId) return
+        setData(null)
+        generateInterviewQuestions()
+    }, [activeVideoId])
+
+    const generateInterviewQuestions = async () => {
+        const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : '')
+        if (!token) return
+
+        setLoading(true)
+        try {
+            const res = await axios.post(
+                `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/youtube/interview/${activeVideoId}`,
+                {},
+                { headers: { Authorization: token } }
+            )
+            const questions = res.data.questions
+            if (!questions) {
+                setData({ error: "No questions generated." })
+                return
+            }
+            setData(questions)
+        } catch (error) {
+            console.error("Error generating interview questions:", error)
+            setData({ error: "Error generating interview questions. Please make sure the video is processed." })
+        } finally {
+            setLoading(false)
+        }
     }
-    if (!data) return null;
+
+    const parseQ = (qData: any) => {
+        if (!qData) return []
+        if (typeof qData === 'string') {
+            try { return JSON.parse(qData) } catch (e) { return [] }
+        }
+        return qData
+    }
+
+    if (loading) {
+        return (
+            <div className="flex items-center gap-2 text-white/50 p-4">
+                <SpinnerGapIcon className="animate-spin" size={20} /> Generating interview questions...
+            </div>
+        )
+    }
+    if (!data) return null
     if (data.error) {
         return <div className="p-4 bg-red-500/10 text-red-400 rounded-2xl">{data.error}</div>
     }
 
-    const parseQ = (qData: any) => {
-        if (!qData) return [];
-        if (typeof qData === 'string') {
-            try { return JSON.parse(qData); } catch (e) { return []; }
-        }
-        return qData;
-    };
-
-    const easy = parseQ(data.easyQuestions);
-    const medium = parseQ(data.mediumQuestions);
-    const hard = parseQ(data.hardQuestions);
+    const easy = parseQ(data.easyQuestions)
+    const medium = parseQ(data.mediumQuestions)
+    const hard = parseQ(data.hardQuestions)
 
     const formatSection = (title: string, qs: any[], color: string) => {
-        if (!qs || qs.length === 0) return null;
+        if (!qs || qs.length === 0) return null
         return (
             <div className="space-y-4">
                 <h4 className={`font-semibold text-lg ${color}`}>{title}</h4>
                 <div className="space-y-4">
                     {qs.map((q: any, i: number) => (
                         <div key={i} className="bg-black/40 p-4 rounded-xl">
-                            <p className="font-medium text-white mb-2"><span className="opacity-50 mr-2">Q{i+1}:</span> {q.question}</p>
+                            <p className="font-medium text-white mb-2"><span className="opacity-50 mr-2">Q{i + 1}:</span> {q.question}</p>
                             <p className="text-white/70"><span className="opacity-50 mr-2">A:</span> {q.answer}</p>
                         </div>
                     ))}
                 </div>
             </div>
         )
-    };
+    }
 
     return (
         <div className="bg-white/5 p-6 rounded-2xl text-white/90 space-y-8">
