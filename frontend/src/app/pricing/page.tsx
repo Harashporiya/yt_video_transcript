@@ -11,6 +11,7 @@ import { PricingToast } from "@/components/pricing/pricing-toast"
 import { FreePlanCard } from "@/components/pricing/free-plan-card"
 import { ProPlanCard } from "@/components/pricing/pro-plan-card"
 import { PLANS } from "@/components/pricing/plans"
+import { LockSimpleIcon } from "@phosphor-icons/react"
 
 declare global {
   interface Window {
@@ -68,7 +69,7 @@ export default function PricingPage() {
         key: orderResult.keyId,
         amount: orderResult.amount,
         currency: orderResult.currency,
-        name: "YouTube Transcripter",
+        name: "Transcripter",
         description: orderResult.planLabel,
         order_id: orderResult.orderId,
         handler: async (response: any) => {
@@ -87,7 +88,7 @@ export default function PricingPage() {
           name: session?.user?.name || "",
           email: session?.user?.email || "",
         },
-        theme: { color: "#000000" },
+        theme: { color: "#e5383b" },
         modal: {
           ondismiss: () => setCheckoutLoading(null),
         },
@@ -104,10 +105,11 @@ export default function PricingPage() {
   const isPro = planStatus?.plan === "pro"
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="relative min-h-screen bg-background text-white flex flex-col">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-grid [mask-image:radial-gradient(ellipse_60%_80%_at_50%_0%,#000_30%,transparent_100%)]" />
       <PricingHeader />
 
-      <div className="flex-1 flex flex-col items-center px-4 py-16">
+      <main className="relative flex-1 flex flex-col items-center px-4 py-16 md:py-20">
         <PricingHero
           isPro={isPro}
           planExpiry={planStatus?.planExpiry}
@@ -117,8 +119,9 @@ export default function PricingPage() {
 
         <PricingToast successMessage={successMessage} error={error} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
-          <FreePlanCard isPro={isPro} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 w-full max-w-5xl items-stretch">
+          {/* Logged-out visitors get a sign-up link instead of "Your current plan" */}
+          <FreePlanCard isPro={isPro} href={token ? undefined : "/signup"} />
 
           {(["monthly", "yearly"] as const).map((planKey) => (
             <ProPlanCard
@@ -132,11 +135,11 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <p className="mt-10 text-white/25 text-xs text-center max-w-sm">
-          🔒 Payments are secured by Razorpay. We never store your card details.
-          Cancel anytime from your account.
+        <p className="mt-10 flex items-center gap-2 text-xs text-white/35 text-center">
+          <LockSimpleIcon size={14} weight="bold" />
+          Payments are handled securely by Razorpay. We never see or store your card details.
         </p>
-      </div>
+      </main>
     </div>
   )
 }
