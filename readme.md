@@ -4,7 +4,24 @@ Ever found yourself scrubbing through a 2-hour YouTube video just to find one sp
 
 A full-stack AI tool that pulls transcripts from any YouTube video, generates smart summaries, opens up a chat window powered by RAG, and even generates interview practice questions — like ChatGPT, but locked to that specific video.
 
-![Landing Page](./frontend/public/home.png)
+![Landing page](./docs/screenshots/landing.png)
+
+<table>
+  <tr>
+    <td width="50%"><img src="./docs/screenshots/signup.png" alt="Sign up page" /></td>
+    <td width="50%"><img src="./docs/screenshots/pricing.png" alt="Pricing page" /></td>
+  </tr>
+  <tr>
+    <td align="center">Sign up</td>
+    <td align="center">Pricing</td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="./docs/screenshots/mobile-landing.png" alt="Landing page on mobile" width="260" />
+  <br />
+  <sub>Mobile</sub>
+</p>
 
 ---
 
