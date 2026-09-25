@@ -46,8 +46,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const loading = isLoading || profileLoading;
   const displayName = session?.user?.name || userProfile?.name || "User"
   const email = session?.user?.email || userProfile?.email
-  const used = planStatus?.videosUsedThisMonth ?? 0
   const videoLimit = limits.videoLimit
+  // Never show more than the limit (e.g. "6/1" after a Pro plan expires); the bar just reads as full
+  const used = Math.min(planStatus?.videosUsedThisMonth ?? 0, videoLimit)
+  const limitReached = used >= videoLimit
   const usagePct = Math.min(100, Math.round((used / Math.max(videoLimit, 1)) * 100))
 
   return (
@@ -123,7 +125,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 {isPro ? <CrownSimpleIcon size={13} weight="fill" className="text-pro" /> : <LightningIcon size={13} weight="fill" className="text-white/50" />}
                 {isPro ? "Pro plan" : "Free plan"}
               </span>
-              <span className="font-mono text-white/45">{used}/{videoLimit} videos</span>
+              <span className={`font-mono ${limitReached ? 'text-pro' : 'text-white/45'}`}>
+                {used}/{videoLimit} videos
+              </span>
             </div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.06]" role="progressbar" aria-valuenow={used} aria-valuemin={0} aria-valuemax={videoLimit} aria-label="Videos used">
               <div className={`h-full rounded-full transition-all ${usagePct >= 100 ? 'bg-pro' : 'bg-white/60'}`} style={{ width: `${usagePct}%` }} />
