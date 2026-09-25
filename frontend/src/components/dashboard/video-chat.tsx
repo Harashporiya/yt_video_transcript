@@ -1,8 +1,19 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { useSearchParams, useRouter } from "next/navigation"
 import axios from "axios"
-import {YoutubeLogoIcon,ListBulletsIcon,ArrowUpIcon,SpinnerGapIcon,ChatCircleTextIcon,ChatTeardropTextIcon,CrownSimpleIcon} from "@phosphor-icons/react"
+import {
+    ListBulletsIcon,
+    ArrowUpIcon,
+    SpinnerGapIcon,
+    ChatTeardropTextIcon,
+    CrownSimpleIcon,
+    SparkleIcon,
+    TargetIcon,
+    WarningIcon,
+    CopyIcon,
+    CheckIcon,
+} from "@phosphor-icons/react"
 import { SummaryView } from "./summary-view"
 import { InterviewView } from "./interview-view"
 import { usePlanStatus } from "@/hooks/usePlanStatus"
@@ -26,6 +37,27 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
     const [chatCount, setChatCount] = useState(0)
 
     const [view, setView] = useState<'chat' | 'summary' | 'interview'>('chat')
+    const scrollRef = useRef<HTMLDivElement>(null)
+    const inputRef = useRef<HTMLTextAreaElement>(null)
+
+    // Keep the newest message in view
+    useEffect(() => {
+        if (view !== 'chat') return
+        scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
+    }, [chatHistory, chatLoading, view])
+
+    // Grow the textarea with its content, up to its max height
+    useEffect(() => {
+        const el = inputRef.current
+        if (!el) return
+        el.style.height = 'auto'
+        el.style.height = `${el.scrollHeight}px`
+    }, [question])
+
+    // Wait for the session to resolve so history doesn't load once with a stale localStorage token and again with the session one
+    const token = status === 'loading'
+        ? null
+        : (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null)
 
     useEffect(() => {
         if (planStatus !== null) {
@@ -41,7 +73,6 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
         setChatCount(0);
 
         const initChat = async () => {
-            const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : '');
             if (!token) return;
 
             if (activeVideoId) {
@@ -73,24 +104,21 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
         };
 
         initChat();
-    }, [activeVideoId, action]);
+        // token is a dependency so history loads once the session finishes loading after a refresh
+    }, [activeVideoId, action, token]);
 
     const askQuestion = async () => {
-        if (!question || !activeVideoId || chatLimitReached) return;
-        const userQ = question;
-        const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : '');
+        if (!question.trim() || !activeVideoId || chatLimitReached || chatLoading) return;
+        const userQ = question.trim();
         setQuestion("");
         setView('chat');
-
-        const historyToSend = chatHistory.slice(-6);
 
         setChatHistory(prev => [...prev, { role: "user", text: userQ }]);
         setChatLoading(true);
 
         try {
             const res = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/youtube/ask/${activeVideoId}`, {
-                question: userQ,
-                chatHistory: historyToSend
+                question: userQ
             }, {
                 headers: { Authorization: token }
             });
@@ -104,150 +132,219 @@ export function VideoChat({ activeVideoId }: VideoChatProps) {
                 setChatLimitReached(true);
                 setChatHistory(prev => prev.filter((_, i) => i !== prev.length - 1));
             } else {
-                setChatHistory(prev => [...prev, { role: "ai", text: "Error fetching answer." }]);
+                setChatHistory(prev => [...prev, { role: "ai", text: error?.response?.data?.message || "Sorry, I couldn't answer that right now. Please try again." }]);
             }
         } finally {
             setChatLoading(false);
         }
     }
 
+    const remaining = Math.max(CHAT_LIMIT - chatCount, 0)
+    const showTabs = chatHistory.length > 0 || view !== 'chat'
+
     return (
-        <div className="flex flex-1 flex-col px-4 max-w-4xl mx-auto w-full h-full overflow-hidden">
+        <div className="flex flex-1 flex-col w-full h-full overflow-hidden">
             {/* View Switcher */}
-            {(chatHistory.length > 0 || view !== 'chat') && (
-                <div className="flex gap-2 py-4 shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden">
-                    <button
-                        onClick={() => setView('chat')}
-                        className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${view === 'chat' ? 'bg-white/10 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}
-                    >
-                        <ChatTeardropTextIcon size={18} /> Chat
-                    </button>
-                    <button
-                        onClick={() => setView('summary')}
-                        className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${view === 'summary' ? 'bg-white/10 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}
-                    >
-                        <ListBulletsIcon size={18} className={view === 'summary' ? 'text-emerald-400' : ''} /> Summary
-                    </button>
-                    <button
-                        onClick={() => setView('interview')}
-                        className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-colors ${view === 'interview' ? 'bg-white/10 text-white' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}
-                    >
-                        <ChatCircleTextIcon size={18} className={view === 'interview' ? 'text-blue-400' : ''} /> Interview & Q&A
-                    </button>
+            {showTabs && (
+                <div className="shrink-0 border-b border-white/[0.06] px-4">
+                    <div role="tablist" aria-label="Video tools" className="mx-auto flex max-w-3xl gap-1 py-2.5 overflow-x-auto no-scrollbar">
+                        {TABS.map(({ id, label, icon: Icon }) => (
+                            <button
+                                key={id}
+                                role="tab"
+                                aria-selected={view === id}
+                                onClick={() => setView(id)}
+                                className={`flex shrink-0 items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${view === id ? 'bg-white/10 text-white' : 'text-white/50 hover:bg-white/5 hover:text-white/80'}`}
+                            >
+                                <Icon size={16} weight={view === id ? 'fill' : 'regular'} className={view === id ? 'text-brand' : ''} />
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
 
-            <div className="flex-1 overflow-y-auto pb-8 flex flex-col gap-6 [&::-webkit-scrollbar]:hidden">
-                {view === 'summary' ? (
-                    <SummaryView activeVideoId={activeVideoId} />
-                ) : view === 'interview' ? (
-                    <InterviewView activeVideoId={activeVideoId} />
-                ) : chatHistory.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center space-y-4 pt-10">
-                        <div className="bg-white/5 p-4 rounded-full"><YoutubeLogoIcon size={32} className="text-white" /></div>
-                        <h2 className="text-2xl font-bold">Video Processed & Ready!</h2>
-                        <p className="text-white/50 max-w-sm text-sm">Ask any question about the video below, or use the quick actions.</p>
-                        <div className="flex flex-wrap gap-3 mt-4 items-center justify-center">
-                            <button onClick={() => setView('summary')} className="px-5 py-2.5 bg-white/5 hover:bg-white/10 hover:text-white rounded-xl transition-colors border border-white/10 text-sm flex items-center gap-2 font-medium">
-                                <ListBulletsIcon size={18} className="text-emerald-400" /> Show Summary
-                            </button>
-                            <button onClick={() => setView('interview')} className="px-5 py-2.5 bg-white/5 hover:bg-white/10 hover:text-white rounded-xl transition-colors border border-white/10 text-sm flex items-center gap-2 font-medium">
-                                <ChatCircleTextIcon size={18} className="text-blue-400" /> Interview & Q&A
-                            </button>
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 custom-scrollbar">
+                <div className="mx-auto flex max-w-3xl flex-col gap-6 py-6">
+                    {view === 'summary' ? (
+                        <SummaryView activeVideoId={activeVideoId} />
+                    ) : view === 'interview' ? (
+                        <InterviewView activeVideoId={activeVideoId} />
+                    ) : chatHistory.length === 0 ? (
+                        <div className="flex flex-col items-center text-center pt-10 md:pt-16 animate-in fade-in duration-500">
+                            <span className="flex size-12 items-center justify-center rounded-2xl bg-brand/10 ring-1 ring-brand/20">
+                                <SparkleIcon size={22} weight="fill" className="text-brand" />
+                            </span>
+                            <h2 className="mt-5 text-2xl font-semibold tracking-tight">Your video is ready</h2>
+                            <p className="mt-2 text-white/50 max-w-sm text-sm">Ask a question below, or jump straight to the summary or interview practice.</p>
+
+                            <div className="mt-8 grid w-full max-w-xl grid-cols-1 gap-2 sm:grid-cols-2">
+                                {SUGGESTIONS.map((q) => (
+                                    <button
+                                        key={q}
+                                        onClick={() => setQuestion(q)}
+                                        disabled={chatLimitReached}
+                                        className="rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-left text-sm text-white/70 transition-colors hover:border-white/20 hover:bg-white/[0.05] hover:text-white disabled:opacity-40"
+                                    >
+                                        {q}
+                                    </button>
+                                ))}
+                            </div>
+
+                            <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                                <button onClick={() => setView('summary')} className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors">
+                                    <ListBulletsIcon size={16} /> Show summary
+                                </button>
+                                <button onClick={() => setView('interview')} className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-white/60 hover:bg-white/5 hover:text-white transition-colors">
+                                    <TargetIcon size={16} /> Interview practice
+                                </button>
+                            </div>
                         </div>
-                    </div>
-                ) : (
-                    <>
-                        {chatHistory.map((chat, idx) => (
-                            <div key={idx} className={`flex ${chat.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] p-4 rounded-2xl ${chat.role === 'user' ? 'bg-white/10 text-white' : 'bg-transparent text-white/90 whitespace-pre-wrap'}`}>
-                                    {chat.text}
+                    ) : (
+                        <>
+                            {chatHistory.map((chat, idx) => (
+                                <ChatBubble key={idx} role={chat.role} text={chat.text} />
+                            ))}
+                            {chatLoading && (
+                                <div className="flex gap-3">
+                                    <AiAvatar />
+                                    <div className="flex items-center gap-1 rounded-2xl px-1 py-3" aria-label="AI is thinking">
+                                        <span className="typing-dot size-1.5 rounded-full bg-white/60" />
+                                        <span className="typing-dot size-1.5 rounded-full bg-white/60" />
+                                        <span className="typing-dot size-1.5 rounded-full bg-white/60" />
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
-                        {chatLoading && (
-                            <div className="flex justify-start">
-                                <div className="p-4 flex items-center gap-2 text-white/50"><SpinnerGapIcon className="animate-spin" size={20} /> AI is thinking...</div>
-                            </div>
-                        )}
-                    </>
-                )}
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
 
-            <div className="w-full pb-6 pt-2 shrink-0 relative">
+            {view === 'chat' && (
+                <div className="shrink-0 px-4 pb-4 pt-2">
+                    <div className="mx-auto max-w-3xl">
+                        {/* Chat Limit Banner */}
+                        {chatLimitReached && (
+                            <div role="alert" className="mb-3 rounded-xl border border-pro/25 bg-pro/[0.07] px-4 py-3 flex items-center gap-3 animate-in fade-in duration-300">
+                                <WarningIcon size={18} weight="fill" className="text-pro shrink-0" />
+                                <p className="flex-1 text-sm text-white/65">
+                                    {isPro
+                                        ? <>You&apos;ve used all <span className="font-semibold text-white">{CHAT_LIMIT} messages</span> for this video.</>
+                                        : <>The free plan includes <span className="font-semibold text-white">{CHAT_LIMIT} messages</span> per video.</>}
+                                </p>
+                                {!isPro && (
+                                    <button
+                                        onClick={() => router.push('/pricing')}
+                                        className="flex shrink-0 items-center gap-1.5 rounded-lg bg-pro px-3 py-1.5 text-xs font-semibold text-black hover:brightness-110 transition"
+                                    >
+                                        <CrownSimpleIcon size={12} weight="fill" /> Upgrade
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
-                {/* Chat Limit Banner */}
-                {chatLimitReached && (
-                    <div className="mb-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl px-4 py-3 flex items-center gap-3 animate-in fade-in duration-300">
-                        <div className="bg-amber-500/20 p-1.5 rounded-full shrink-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="text-amber-400" viewBox="0 0 256 256">
-                                <path d="M236.8,188.09,149.35,36.22a24.76,24.76,0,0,0-42.7,0L19.2,188.09a23.51,23.51,0,0,0,0,23.72A24.35,24.35,0,0,0,40.55,224h174.9a24.35,24.35,0,0,0,21.33-12.19A23.51,23.51,0,0,0,236.8,188.09ZM120,104a8,8,0,0,1,16,0v40a8,8,0,0,1-16,0Zm8,88a12,12,0,1,1,12-12A12,12,0,0,1,128,192Z" />
-                            </svg>
-                        </div>
-                        <div className="flex-1">
-                            <p className="text-amber-400 font-semibold text-xs">Chat Limit Reached</p>
-                            <p className="text-amber-400/70 text-xs leading-relaxed">
-                                {isPro
-                                    ? <>You have used all <span className="font-bold text-amber-400">{CHAT_LIMIT} messages</span> for this video on your Pro plan.</>
-                                    : <>Free plan allows only <span className="font-bold text-amber-400">3 messages</span> per video. Upgrade for more!</>}
-                            </p>
-                            {!isPro && (
+                        <form
+                            onSubmit={(e) => { e.preventDefault(); askQuestion(); }}
+                            className={`rounded-2xl border bg-surface p-2 shadow-xl shadow-black/40 transition-colors ${chatLimitReached ? 'border-white/5 opacity-50' : 'border-white/10 focus-within:border-white/25'}`}
+                        >
+                            <label htmlFor="chat-input" className="sr-only">Ask about the video</label>
+                            <textarea
+                                id="chat-input"
+                                ref={inputRef}
+                                value={question}
+                                onChange={(e) => setQuestion(e.target.value)}
+                                placeholder={chatLimitReached ? "Message limit reached for this video" : "Ask anything about the video…"}
+                                disabled={chatLimitReached}
+                                maxLength={1000}
+                                className="block w-full bg-transparent text-white placeholder:text-white/30 resize-none outline-none min-h-[44px] max-h-[200px] px-2.5 py-2 text-[15px] leading-relaxed no-scrollbar disabled:cursor-not-allowed"
+                                rows={1}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                                        e.preventDefault();
+                                        askQuestion();
+                                    }
+                                }}
+                            />
+                            <div className="flex items-center justify-between gap-2 pl-2.5">
+                                <span className="text-xs text-white/30">
+                                    {chatLimitReached
+                                        ? 'Limit reached'
+                                        : planStatus
+                                            ? `${remaining} of ${CHAT_LIMIT} messages left`
+                                            : <span className="hidden sm:inline">Enter to send · Shift + Enter for a new line</span>}
+                                </span>
                                 <button
-                                    onClick={() => router.push('/pricing')}
-                                    className="mt-1.5 flex items-center gap-1.5 text-[11px] bg-violet-500 hover:bg-violet-400 text-white font-bold px-2.5 py-1 rounded-lg transition-colors"
+                                    type="submit"
+                                    disabled={chatLoading || !question.trim() || chatLimitReached}
+                                    aria-label="Send"
+                                    className="flex size-9 items-center justify-center rounded-xl bg-white text-black hover:bg-white/90 disabled:opacity-30 disabled:cursor-not-allowed transition-all active:scale-95"
                                 >
-                                    <CrownSimpleIcon size={12} weight="fill" />
-                                    Upgrade to Pro
+                                    {chatLoading ? <SpinnerGapIcon size={16} className="animate-spin" weight="bold" /> : <ArrowUpIcon size={16} weight="bold" />}
                                 </button>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {!chatLimitReached && chatCount > 0 && CHAT_LIMIT < 999999 && (
-                    <div className="mb-2 flex justify-end">
-                        <span className="text-white/30 text-xs">{CHAT_LIMIT - chatCount} message{CHAT_LIMIT - chatCount !== 1 ? 's' : ''} remaining</span>
-                    </div>
-                )}
-
-
-                <div className={`bg-[#0a0a0a] rounded-[24px] flex flex-col p-3 shadow-lg border transition-colors ${chatLimitReached ? 'border-amber-500/20 opacity-50' : 'border-white/5 focus-within:border-white/20'
-                    }`}>
-                    <textarea
-                        value={question}
-                        onChange={(e) => setQuestion(e.target.value)}
-                        placeholder={chatLimitReached ? "Chat limit reached. You cannot send more messages." : "Ask anything about the video..."}
-                        disabled={chatLimitReached}
-                        className="w-full bg-transparent text-white placeholder:text-white/50 resize-none outline-none min-h-[44px] max-h-[200px] px-3 py-2 text-base [&::-webkit-scrollbar]:hidden disabled:cursor-not-allowed"
-                        rows={1}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                askQuestion();
-                            }
-                        }}
-                    />
-                    <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center gap-2 px-1">
-                            <div className={`w-1.5 h-1.5 rounded-full ${chatLimitReached ? 'bg-amber-500' : 'bg-green-500 animate-pulse'}`} />
-                            <span className="text-[11px] font-semibold tracking-wider uppercase text-white/30">
-                                {chatLimitReached ? 'Limit Reached' : 'AI Ready'}
-                            </span>
-                            {!chatLimitReached && (
-                                <span className="text-[10px] text-white/20 hidden sm:inline">· Enter to send</span>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={askQuestion}
-                                disabled={chatLoading || !question || chatLimitReached}
-                                className="p-2 bg-white text-black hover:text-black rounded-full hover:bg-white/90 disabled:opacity-50 transition-colors ml-1"
-                            >
-                                <ArrowUpIcon size={20} weight="bold" />
-                            </button>
-                        </div>
+                            </div>
+                        </form>
+                        <p className="mt-2 text-center text-[11px] text-white/25">Answers are generated from the video transcript and can be wrong.</p>
                     </div>
                 </div>
+            )}
+        </div>
+    )
+}
+
+const TABS = [
+    { id: 'chat', label: 'Chat', icon: ChatTeardropTextIcon },
+    { id: 'summary', label: 'Summary', icon: ListBulletsIcon },
+    { id: 'interview', label: 'Interview prep', icon: TargetIcon },
+] as const
+
+const SUGGESTIONS = [
+    "What is the main idea of this video?",
+    "List the key steps explained",
+    "Explain the hardest concept simply",
+    "What should I remember from this?",
+]
+
+function AiAvatar() {
+    return (
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-brand/10 ring-1 ring-brand/20">
+            <SparkleIcon size={14} weight="fill" className="text-brand" />
+        </span>
+    )
+}
+
+function ChatBubble({ role, text }: { role: string; text: string }) {
+    const [copied, setCopied] = useState(false)
+
+    if (role === 'user') {
+        return (
+            <div className="flex justify-end animate-in fade-in slide-in-from-bottom-1 duration-200">
+                <div className="max-w-[85%] rounded-2xl rounded-br-md bg-white/10 px-4 py-2.5 text-[15px] leading-relaxed text-white whitespace-pre-wrap">
+                    {text}
+                </div>
+            </div>
+        )
+    }
+
+    const copy = async () => {
+        try {
+            await navigator.clipboard.writeText(text)
+            setCopied(true)
+            setTimeout(() => setCopied(false), 1500)
+        } catch { /* clipboard unavailable */ }
+    }
+
+    return (
+        <div className="group flex gap-3 animate-in fade-in slide-in-from-bottom-1 duration-200">
+            <AiAvatar />
+            <div className="min-w-0 flex-1">
+                <div className="text-[15px] leading-relaxed text-white/85 whitespace-pre-wrap pt-0.5">{text}</div>
+                <button
+                    onClick={copy}
+                    className="mt-1.5 inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-xs text-white/35 opacity-0 transition hover:bg-white/5 hover:text-white group-hover:opacity-100 focus-visible:opacity-100"
+                >
+                    {copied ? <CheckIcon size={12} weight="bold" /> : <CopyIcon size={12} />}
+                    {copied ? 'Copied' : 'Copy'}
+                </button>
             </div>
         </div>
     )
