@@ -7,24 +7,21 @@ import {
   generateInterviewController,
   getSummaryController,
   getChatHistoryController,
-  saveChatMessageController,
 } from "../controllers/youtube.controllers.js";
 import { authenticateToken } from "../middlewares.js";
 
 const router = express.Router();
 
-router.post("/video-url",authenticateToken,processVideoController);
+router.post("/video-url", authenticateToken, processVideoController);
 
-router.post("/ask/:videoId",authenticateToken,askQuestionController);
+router.post("/ask/:videoId", authenticateToken, askQuestionController);
 
-router.delete("/delete/:videoId",authenticateToken,videoDeleteController)
+router.delete("/delete/:videoId", authenticateToken, videoDeleteController)
 
-router.post("/interview/:videoId",authenticateToken,generateInterviewController);
+router.post("/interview/:videoId", authenticateToken, generateInterviewController);
 
-router.get("/summary/:videoId",authenticateToken,getSummaryController);
+router.get("/summary/:videoId", authenticateToken, getSummaryController);
 
-router.get("/chat/:videoId",authenticateToken,getChatHistoryController);
-
-router.post("/chat/:videoId/save",authenticateToken,saveChatMessageController);
+router.get("/chat/:videoId", authenticateToken, getChatHistoryController);
 
 export default router;
