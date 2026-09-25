@@ -3,8 +3,8 @@ import { ChatGroq } from "@langchain/groq";
 
 export const llm = new ChatGroq({
     apiKey: process.env.GROQ_API_KEY,
-    model: "llama-3.3-70b-versatile",
-    // model:"llama-3.1-8b-instant",
+    // Groq retired its Llama chat models; override with GROQ_MODEL (e.g. "openai/gpt-oss-120b")
+    model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
     temperature: 0.2,
 });
 
