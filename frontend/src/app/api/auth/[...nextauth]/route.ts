@@ -12,7 +12,7 @@ export const authOptions: NextAuthOptions = {
     secret: process.env.NEXTAUTH_SECRET,
     session: {
         strategy: "jwt",
-        maxAge: 30 * 24 * 60 * 60,
+        maxAge: 2 * 24 * 60 * 60, // matches the backend JWT lifetime
     },
     pages: {
         signIn: "/login",
@@ -22,9 +22,9 @@ export const authOptions: NextAuthOptions = {
         async signIn({ user, account }) {
             if (account?.provider === "google") {
                 try {
+                    // The backend verifies this token with Google instead of trusting a raw email
                     const response = await axios.post(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/users/google`, {
-                        email: user.email,
-                        name: user.name
+                        idToken: account.id_token
                     });
 
                     if (response.status === 200 || response.status === 201) {
