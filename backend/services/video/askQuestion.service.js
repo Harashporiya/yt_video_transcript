@@ -4,20 +4,23 @@ import { pineconeIndex } from "../ai/pinecone.js";
 import { prisma } from "../../lib/prisma.js";
 import { graph } from "../ai/graph.js";
 
-export const askQuestionService = async (question, userId, videoId, chatHistory = []) => {
+const HISTORY_LENGTH = 6;
 
-    const namespace = `${userId}-${videoId}`;
-
+export const askQuestionService = async (question, userId, video) => {
 
     const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
         pineconeIndex,
-        namespace,
+        namespace: video.namespace,
     });
 
-
-    const videoPromise = prisma.video.findUnique({
-        where: { userId_videoId: { userId, videoId } }
+    // History comes from the database, not the client, so it can't be forged
+    const recentMessages = await prisma.chatMessage.findMany({
+        where: { videoRefId: video.id },
+        orderBy: { createdAt: "desc" },
+        take: HISTORY_LENGTH,
+        select: { role: true, text: true },
     });
+    const chatHistory = recentMessages.reverse();
 
     const result = await graph.invoke(
         { question, chatHistory },
@@ -30,16 +33,14 @@ export const askQuestionService = async (question, userId, videoId, chatHistory 
 
     console.log(`[AskQuestion] Intent="${intent}" | Answer length=${answer?.length}`);
 
-
-    const video = await videoPromise;
-    if (video) {
-        await prisma.chatMessage.createMany({
-            data: [
-                { userId, videoRefId: video.id, role: "user", text: question },
-                { userId, videoRefId: video.id, role: "ai", text: answer },
-            ],
-        });
-    }
+    // Distinct timestamps keep the question ordered before its answer
+    const askedAt = new Date();
+    await prisma.chatMessage.createMany({
+        data: [
+            { userId, videoRefId: video.id, role: "user", text: question, createdAt: askedAt },
+            { userId, videoRefId: video.id, role: "ai", text: answer, createdAt: new Date(askedAt.getTime() + 1) },
+        ],
+    });
 
     return answer;
 };
