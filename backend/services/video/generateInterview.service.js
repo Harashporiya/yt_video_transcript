@@ -22,7 +22,12 @@ export const generateInterviewService = async (videoId, userId) => {
         return video.questions[0];
     }
 
-    const transcript = await getTranscript(video.videoUrl);
+    // Videos processed before transcripts were stored need a one-time fetch
+    let transcript = video.transcript;
+    if (!transcript) {
+        transcript = await getTranscript(video.videoUrl);
+        await prisma.video.update({ where: { id: video.id }, data: { transcript } });
+    }
     const parsedQuestions = await generateQuestions(transcript);
 
 
@@ -31,16 +36,16 @@ export const generateInterviewService = async (videoId, userId) => {
             userId_videoRefId: { userId, videoRefId: video.id },
         },
         update: {
-            easyQuestions: JSON.stringify(parsedQuestions.easyQuestions),
-            mediumQuestions: JSON.stringify(parsedQuestions.mediumQuestions),
-            hardQuestions: JSON.stringify(parsedQuestions.hardQuestions),
+            easyQuestions: parsedQuestions.easyQuestions,
+            mediumQuestions: parsedQuestions.mediumQuestions,
+            hardQuestions: parsedQuestions.hardQuestions,
         },
         create: {
             userId,
             videoRefId: video.id,
-            easyQuestions: JSON.stringify(parsedQuestions.easyQuestions),
-            mediumQuestions: JSON.stringify(parsedQuestions.mediumQuestions),
-            hardQuestions: JSON.stringify(parsedQuestions.hardQuestions),
+            easyQuestions: parsedQuestions.easyQuestions,
+            mediumQuestions: parsedQuestions.mediumQuestions,
+            hardQuestions: parsedQuestions.hardQuestions,
         },
     });
 
