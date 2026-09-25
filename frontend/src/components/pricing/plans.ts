@@ -3,10 +3,22 @@ export interface PlanConfig {
   price: string
   period: string
   description: string
-  color: string
-  border: string
   badge: string | null
+  highlight: boolean
   features: string[]
+}
+
+export const FREE_PLAN = {
+  label: "Free",
+  price: "₹0",
+  period: "forever",
+  description: "Try it on a video you care about",
+  features: [
+    "1 video in total",
+    "3 chat messages per video",
+    "AI summaries",
+    "Interview questions",
+  ],
 }
 
 export const PLANS: Record<"monthly" | "yearly", PlanConfig> = {
@@ -14,32 +26,30 @@ export const PLANS: Record<"monthly" | "yearly", PlanConfig> = {
     label: "Pro Monthly",
     price: "₹199",
     period: "/month",
-    description: "Perfect for regular learners",
-    color: "from-amber-500/20 to-orange-500/20",
-    border: "border-amber-500/30",
+    description: "For regular learners",
     badge: null,
+    highlight: false,
     features: [
       "5 videos per month",
       "15 chat messages per video",
-      "AI Summaries",
-      "Interview Question Generator",
-      "Priority Support",
+      "AI summaries",
+      "Interview questions",
+      "Priority support",
     ],
   },
   yearly: {
     label: "Pro Yearly",
     price: "₹999",
     period: "/year",
-    description: "Best value — save 58%",
-    color: "from-violet-500/20 to-purple-500/20",
-    border: "border-violet-500/30",
-    badge: "BEST VALUE",
+    description: "Save 58% compared with monthly",
+    badge: "Best value",
+    highlight: true,
     features: [
       "30 videos per year",
       "35 chat messages per video",
-      "AI Summaries",
-      "Interview Question Generator",
-      "Priority Support",
+      "AI summaries",
+      "Interview questions",
+      "Priority support",
       "Early access to new features",
     ],
   },
