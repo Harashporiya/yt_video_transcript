@@ -183,7 +183,9 @@ export async function getPlanStatusService(userId) {
     plan: isPro ? "pro" : "free",
     planType,
     planExpiry,
-    videosUsedThisMonth: videosUsed,
+    // Capped for display: an expired Pro user's lifetime count (e.g. 6) would otherwise show as "6/1" on the free plan.
+    // The real count still drives limit checks in plan.service.js.
+    videosUsedThisMonth: Math.min(videosUsed, limits.videoLimit),
     isExpired,
     limits,
   };
