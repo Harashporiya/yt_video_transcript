@@ -1,27 +1,26 @@
 import React, { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import axios from 'axios'
-import { SpinnerGapIcon } from "@phosphor-icons/react"
+import { CaretDownIcon } from "@phosphor-icons/react"
+import { CopyButton, ErrorCard, SectionSkeleton } from "./summary-view"
 
 interface InterviewViewProps {
     activeVideoId: string
 }
 
 export function InterviewView({ activeVideoId }: InterviewViewProps) {
-    const { data: session } = useSession()
+    const { data: session, status } = useSession()
     const [data, setData] = useState<any>(null)
     const [loading, setLoading] = useState(false)
+    const [filter, setFilter] = useState<'all' | 'easy' | 'medium' | 'hard'>('all')
+    // Wait for the session to resolve so the effect doesn't fire once with a stale localStorage token and again with the session one
+    const token = status === 'loading'
+        ? null
+        : (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null)
 
-    useEffect(() => {
-        if (!activeVideoId) return
-        setData(null)
-        generateInterviewQuestions()
-    }, [activeVideoId])
 
     const generateInterviewQuestions = async () => {
-        const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : '')
-        if (!token) return
-
+        setData(null)
         setLoading(true)
         try {
             const res = await axios.post(
@@ -37,11 +36,20 @@ export function InterviewView({ activeVideoId }: InterviewViewProps) {
             setData(questions)
         } catch (error) {
             console.error("Error generating interview questions:", error)
-            setData({ error: "Error generating interview questions. Please make sure the video is processed." })
+            setData({ error: "Couldn't generate interview questions. Please try again." })
         } finally {
             setLoading(false)
         }
     }
+
+    // token is a dependency so this re-runs once the session finishes loading after a refresh
+    useEffect(() => {
+        if (!activeVideoId || !token) return
+        // Fetching data on mount; the loading state it sets is intentional
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        generateInterviewQuestions()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeVideoId, token])
 
     const parseQ = (qData: any) => {
         if (!qData) return []
@@ -51,47 +59,85 @@ export function InterviewView({ activeVideoId }: InterviewViewProps) {
         return qData
     }
 
-    if (loading) {
-        return (
-            <div className="flex items-center gap-2 text-white/50 p-4">
-                <SpinnerGapIcon className="animate-spin" size={20} /> Generating interview questions...
-            </div>
-        )
+    if (loading || (!data && token)) {
+        return <SectionSkeleton label="Preparing interview questions… this can take a few seconds the first time." />
     }
     if (!data) return null
     if (data.error) {
-        return <div className="p-4 bg-red-500/10 text-red-400 rounded-2xl">{data.error}</div>
+        return <ErrorCard message={data.error} onRetry={generateInterviewQuestions} />
     }
 
-    const easy = parseQ(data.easyQuestions)
-    const medium = parseQ(data.mediumQuestions)
-    const hard = parseQ(data.hardQuestions)
+    const levels = LEVELS.map(level => ({ ...level, questions: parseQ(data[level.key]) as QA[] }))
+        .filter(level => level.questions.length > 0)
+    const total = levels.reduce((n, l) => n + l.questions.length, 0)
+    const visible = filter === 'all' ? levels : levels.filter(l => l.id === filter)
 
-    const formatSection = (title: string, qs: any[], color: string) => {
-        if (!qs || qs.length === 0) return null
-        return (
-            <div className="space-y-4">
-                <h4 className={`font-semibold text-lg ${color}`}>{title}</h4>
-                <div className="space-y-4">
-                    {qs.map((q: any, i: number) => (
-                        <div key={i} className="bg-black/40 p-4 rounded-xl">
-                            <p className="font-medium text-white mb-2"><span className="opacity-50 mr-2">Q{i + 1}:</span> {q.question}</p>
-                            <p className="text-white/70"><span className="opacity-50 mr-2">A:</span> {q.answer}</p>
-                        </div>
-                    ))}
-                </div>
-            </div>
-        )
-    }
+    const plainText = levels.map(l =>
+        `${l.label} questions\n` + l.questions.map((q, i) => `Q${i + 1}. ${q.question}\nA: ${q.answer}`).join('\n\n')
+    ).join('\n\n')
 
     return (
-        <div className="bg-white/5 p-6 rounded-2xl text-white/90 space-y-8">
-            <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <span className="text-blue-400">🎯</span> Interview & Practice Q&A
-            </h3>
-            {formatSection("🟢 Easy Questions", easy, "text-green-400")}
-            {formatSection("🟡 Medium Questions", medium, "text-yellow-400")}
-            {formatSection("🔴 Hard Questions", hard, "text-red-400")}
-        </div>
+        <article className="space-y-6 animate-in fade-in duration-300">
+            <header className="flex items-start justify-between gap-4">
+                <div>
+                    <h2 className="text-xl font-semibold tracking-tight text-white">Interview prep</h2>
+                    <p className="text-sm text-white/40">{total} questions · try answering before you reveal</p>
+                </div>
+                <CopyButton text={plainText} />
+            </header>
+
+            <div role="tablist" aria-label="Difficulty" className="flex flex-wrap gap-2">
+                <FilterChip active={filter === 'all'} onClick={() => setFilter('all')}>All <span className="text-white/35">{total}</span></FilterChip>
+                {levels.map(l => (
+                    <FilterChip key={l.id} active={filter === l.id} onClick={() => setFilter(l.id)}>
+                        <span className={`size-1.5 rounded-full ${l.dot}`} /> {l.label} <span className="text-white/35">{l.questions.length}</span>
+                    </FilterChip>
+                ))}
+            </div>
+
+            {visible.map(level => (
+                <section key={level.id} className="space-y-2">
+                    {filter === 'all' && (
+                        <h3 className="flex items-center gap-2 pt-2 text-sm font-semibold text-white/70">
+                            <span className={`size-1.5 rounded-full ${level.dot}`} /> {level.label}
+                        </h3>
+                    )}
+                    {level.questions.map((q, i) => (
+                        <details key={i} className="group rounded-xl border border-white/[0.07] bg-white/[0.02] open:border-white/15 open:bg-white/[0.04] transition-colors">
+                            <summary className="flex cursor-pointer list-none items-start gap-3 p-4 [&::-webkit-details-marker]:hidden">
+                                <span className="mt-0.5 shrink-0 font-mono text-xs text-white/35">Q{i + 1}</span>
+                                <span className="flex-1 text-[15px] font-medium leading-relaxed text-white/90">{q.question}</span>
+                                <span className="mt-0.5 shrink-0 text-xs text-white/35 group-open:hidden">Reveal answer</span>
+                                <CaretDownIcon size={16} className="mt-1 shrink-0 text-white/40 transition-transform group-open:rotate-180" />
+                            </summary>
+                            <div className="border-t border-white/[0.06] px-4 pb-4 pt-3 pl-11">
+                                <p className="text-[15px] leading-relaxed text-white/70 whitespace-pre-wrap">{q.answer}</p>
+                            </div>
+                        </details>
+                    ))}
+                </section>
+            ))}
+        </article>
+    )
+}
+
+interface QA { question: string; answer: string }
+
+const LEVELS = [
+    { id: 'easy', key: 'easyQuestions', label: 'Easy', dot: 'bg-emerald-400' },
+    { id: 'medium', key: 'mediumQuestions', label: 'Medium', dot: 'bg-amber-400' },
+    { id: 'hard', key: 'hardQuestions', label: 'Hard', dot: 'bg-red-400' },
+] as const
+
+function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+    return (
+        <button
+            role="tab"
+            aria-selected={active}
+            onClick={onClick}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors ${active ? 'border-white/20 bg-white/10 text-white' : 'border-white/[0.08] text-white/55 hover:bg-white/5 hover:text-white/80'}`}
+        >
+            {children}
+        </button>
     )
 }
