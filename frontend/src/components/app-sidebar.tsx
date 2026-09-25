@@ -3,28 +3,25 @@
 import React, { useEffect, useState } from "react"
 import {Sidebar,SidebarContent,SidebarFooter,SidebarHeader,SidebarMenu,SidebarMenuButton,
   SidebarMenuItem,SidebarGroup,SidebarGroupLabel,SidebarGroupContent,} from "@/components/ui/sidebar"
-import {YoutubeLogoIcon,PlusIcon,VideoCameraIcon,ClockCounterClockwiseIcon,SidebarSimpleIcon,
-  TrashIcon,DotsThreeIcon,SignOutIcon,CrownSimpleIcon,LightningIcon,} from "@phosphor-icons/react"
-import {DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger,} from "@/components/ui/dropdown-menu"
+import { PlusIcon, VideoCameraIcon, SignOutIcon, CrownSimpleIcon, LightningIcon, CaretUpDownIcon } from "@phosphor-icons/react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useSession, signOut } from "next-auth/react"
 import axios from "axios"
-import { useRouter } from "next/navigation"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { InfoIcon } from "@phosphor-icons/react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { BrandLogo } from "@/components/brand-logo"
 import { useAppDispatch, useAppSelector } from "@/store/hooks"
-import { fetchVideos, setSuccessMessage } from "@/store/slices/videoSlice"
+import { fetchVideos } from "@/store/slices/videoSlice"
 import { usePlanStatus } from "@/hooks/usePlanStatus"
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const { data: session } = useSession()
   const router = useRouter()
   const dispatch = useAppDispatch()
-  const { videos, isLoading, successMessage } = useAppSelector((s) => s.video)
+  const { videos, isLoading } = useAppSelector((s) => s.video)
+  const activeVideoId = useSearchParams().get("v")
   const [userProfile, setUserProfile] = useState<any>(null)
-  // const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const [profileLoading, setProfileLoading] = useState(true)
-  const { isPro, loading: planLoading } = usePlanStatus()
+  const { isPro, loading: planLoading, planStatus, limits } = usePlanStatus()
 
 
   
@@ -46,176 +43,99 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }).catch(console.error).finally(() => setProfileLoading(false));
   }, [])
 
-  // const executeDelete = async (videoId: string) => {
-  //   const token = (session as any)?.backendToken || (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
-  //   if (!token) return;
-  //
-  //   setError(null);
-  //   try {
-  //     await axios.delete(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/youtube/delete/${videoId}`, {
-  //       headers: { Authorization: token }
-  //     });
-  //
-  //     // Refresh list from server after delete
-  //     await refreshVideos();
-  //     setConfirmDeleteId(null);
-  //     setSuccessMessage("Video deleted successfully!");
-  //
-  //     const currentUrl = new URL(window.location.href);
-  //     if (currentUrl.searchParams.get("v") === videoId) {
-  //       router.push('/dashboard');
-  //     }
-  //   } catch (err: any) {
-  //     console.error("Failed to delete video:", err);
-  //     setError("Failed to delete video");
-  //     setTimeout(() => setError(null), 3000);
-  //   }
-  // }
-
   const loading = isLoading || profileLoading;
+  const displayName = session?.user?.name || userProfile?.name || "User"
+  const email = session?.user?.email || userProfile?.email
+  const used = planStatus?.videosUsedThisMonth ?? 0
+  const videoLimit = limits.videoLimit
+  const usagePct = Math.min(100, Math.round((used / Math.max(videoLimit, 1)) * 100))
 
   return (
-    <Sidebar className="border-r-0 !bg-black border-r border-white/10 text-white w-[260px]" {...props}>
-      <SidebarHeader className="p-3 pb-0 !bg-black">
-        {error && (
-          <Alert variant="destructive" className="mb-4 bg-red-500/10 border-red-500/20 text-red-500">
-            <InfoIcon className="h-4 w-4" weight="bold" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        <SidebarMenu>
-          <SidebarMenuItem className="mb-4 mt-1 flex items-center justify-between w-full px-2">
-            <div
-              onClick={() => router.push('/dashboard')}
-              className="flex items-center gap-2 hover:bg-white/5 hover:text-white px-2 py-1.5 rounded-lg cursor-pointer text-white/90 transition-colors flex-1"
-            >
-              <YoutubeLogoIcon size={24} className="text-white" weight="fill" />
-              <span className="font-semibold text-sm tracking-wide">Transcripter</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <button className="p-1.5 text-white/70 hover:text-white rounded-md hover:bg-white/5 transition-colors">
-                <SidebarSimpleIcon size={18} />
-              </button>
-            </div>
-          </SidebarMenuItem>
-          <SidebarMenuItem className="px-2">
-            <button
-              onClick={() => router.push('/dashboard')}
-              className="flex w-full items-center justify-center gap-2 rounded-full bg-white text-black hover:text-black px-4 py-2.5 text-sm font-bold hover:bg-white/90 transition-colors"
-            >
-              <PlusIcon size={16} weight="bold" />
-              New Video Process
-            </button>
-          </SidebarMenuItem>
-        </SidebarMenu>
+    <Sidebar className="border-r border-white/[0.08] text-white" {...props}>
+      <SidebarHeader className="gap-3 p-3">
+        <div className="flex items-center justify-between px-1 pt-1">
+          <BrandLogo href="/dashboard" size="sm" />
+        </div>
+        <button
+          onClick={() => router.push('/dashboard')}
+          className="flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-black transition-all hover:bg-white/90 active:scale-[0.98]"
+        >
+          <PlusIcon size={16} weight="bold" />
+          New video
+        </button>
       </SidebarHeader>
 
-      <SidebarContent className="!bg-black px-3 pt-4 custom-scrollbar">
-        <SidebarGroup className="mt-2 px-1">
-          <SidebarGroupLabel className="text-xs font-semibold text-white/50 px-2 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-            <ClockCounterClockwiseIcon size={14} weight="bold" /> Recent Videos
+      <SidebarContent className="px-2 custom-scrollbar">
+        <SidebarGroup className="px-1">
+          <SidebarGroupLabel className="px-2 text-xs font-medium text-white/40">
+            Your videos
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <div className="flex flex-col gap-1 mt-1">
+            <SidebarMenu className="gap-0.5">
               {loading ? (
-                <div className="flex flex-col gap-2 p-2">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="h-9 bg-white/5 rounded-lg animate-pulse w-full flex items-center gap-3 px-2">
-                      <div className="w-4 h-4 bg-white/10 rounded-full shrink-0"></div>
-                      <div className="h-2.5 bg-white/10 rounded-full w-full"></div>
-                    </div>
-                  ))}
-                </div>
-              ) : videos.length === 0 ? (
-                <div className="text-white/30 text-xs px-2 py-1">No videos processed yet.</div>
-              ) : (
-                videos.map(v => (
-                  <SidebarMenuButton
-                    key={v.id}
-                    onClick={() => router.push(`?v=${v.videoId}`)}
-                    className="hover:bg-white/5 hover:text-white text-white/80 text-sm h-9 rounded-lg font-medium flex items-center gap-2.5 cursor-pointer group relative"
-                  >
-                    <VideoCameraIcon size={16} className="shrink-0 text-red-400" />
-                    <span className="truncate flex-1 text-left">{v.title || v.videoId}</span>
-
-                    {/* Delete button commented out as requested */}
-                    {/* <div className="absolute right-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu onOpenChange={(open) => { if (!open) setConfirmDeleteId(null); }}>
-                        <DropdownMenuTrigger asChild>
-                          <div role="button" className="p-1 hover:text-white text-white/50 rounded-md hover:bg-white/10 z-10 flex items-center justify-center cursor-pointer">
-                            <DotsThreeIcon size={20} weight="bold" />
-                          </div>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 bg-[#0a0a0a] text-white border-white/10 rounded-xl shadow-xl overflow-hidden p-1">
-                          {confirmDeleteId === v.videoId ? (
-                            <div className="flex flex-col gap-1">
-                              <div className="text-[10px] text-white/50 font-bold px-2 py-1.5 uppercase tracking-wider text-center">Are you sure?</div>
-                              <DropdownMenuItem
-                                className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer flex items-center justify-center gap-2 rounded-lg font-medium py-2 px-2.5"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  executeDelete(v.videoId);
-                                }}
-                              >
-                                Yes, Delete
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-white/70 focus:text-white focus:bg-white/10 cursor-pointer flex items-center justify-center gap-2 rounded-lg font-medium py-2 px-2.5"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  setConfirmDeleteId(null);
-                                }}
-                              >
-                                Cancel
-                              </DropdownMenuItem>
-                            </div>
-                          ) : (
-                            <>
-                              <DropdownMenuItem
-                                className="text-red-500 focus:text-red-500 focus:bg-red-500/10 cursor-pointer flex items-center gap-2.5 rounded-lg font-medium py-2 px-2.5"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  e.preventDefault();
-                                  setConfirmDeleteId(v.videoId);
-                                }}
-                              >
-                                <TrashIcon size={16} weight="bold" />
-                                Delete Video
-                              </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div> */}
-                  </SidebarMenuButton>
+                [1, 2, 3, 4].map((i) => (
+                  <div key={i} className="flex items-center gap-2.5 px-2 py-1.5">
+                    <div className="h-7 aspect-video rounded bg-white/[0.06] animate-pulse shrink-0" />
+                    <div className="h-2.5 flex-1 rounded-full bg-white/[0.06] animate-pulse" />
+                  </div>
                 ))
+              ) : videos.length === 0 ? (
+                <div className="mx-1 rounded-xl border border-dashed border-white/10 px-3 py-5 text-center">
+                  <VideoCameraIcon size={20} className="mx-auto text-white/25" />
+                  <p className="mt-2 text-xs text-white/40">Videos you process will show up here.</p>
+                </div>
+              ) : (
+                videos.map(v => {
+                  const active = v.videoId === activeVideoId
+                  return (
+                    <SidebarMenuItem key={v.id}>
+                      <SidebarMenuButton
+                        isActive={active}
+                        onClick={() => router.push(`/dashboard?v=${v.videoId}`)}
+                        title={v.title || v.videoId}
+                        className={`h-auto gap-2.5 rounded-lg px-2 py-1.5 text-sm cursor-pointer transition-colors ${active ? '!bg-white/10 !text-white' : 'text-white/65 hover:!bg-white/5 hover:!text-white'}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={v.thumbnail || `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg`}
+                          alt=""
+                          loading="lazy"
+                          className="h-7 aspect-video rounded object-cover ring-1 ring-white/10 shrink-0"
+                          onError={(e) => { e.currentTarget.src = `https://img.youtube.com/vi/${v.videoId}/mqdefault.jpg` }}
+                        />
+                        <span className="truncate flex-1 text-left">{v.title || v.videoId}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })
               )}
-            </div>
+            </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="!bg-black p-3 pb-4 border-t border-white/10 flex flex-col gap-3">
-        {/* Upgrade Banner for Free Users */}
-        {!planLoading && !isPro && (
-          <div className="bg-gradient-to-br from-violet-500/10 to-amber-500/10 border border-violet-500/20 rounded-xl p-3.5 flex flex-col gap-2.5 animate-in slide-in-from-bottom-2 duration-300">
-            <div className="flex gap-2">
-              <CrownSimpleIcon size={18} className="text-amber-400 shrink-0" weight="fill" />
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[11px] font-bold text-amber-400 tracking-wider uppercase">Upgrade to Pro</span>
-                <span className="text-[11px] text-white/50 leading-normal">
-                  Unlock more videos, higher chat limits & priority support.
-                </span>
-              </div>
+      <SidebarFooter className="gap-2 border-t border-white/[0.08] p-3">
+        {/* Plan usage */}
+        {!planLoading && planStatus && (
+          <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-3">
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-1.5 font-medium text-white/80">
+                {isPro ? <CrownSimpleIcon size={13} weight="fill" className="text-pro" /> : <LightningIcon size={13} weight="fill" className="text-white/50" />}
+                {isPro ? "Pro plan" : "Free plan"}
+              </span>
+              <span className="font-mono text-white/45">{used}/{videoLimit} videos</span>
             </div>
-            <button
-              onClick={() => router.push("/pricing")}
-              className="w-full bg-violet-500 hover:bg-violet-400 text-white font-bold text-xs py-2 rounded-lg transition-colors shadow-sm"
-            >
-              Get Pro for ₹199
-            </button>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.06]" role="progressbar" aria-valuenow={used} aria-valuemin={0} aria-valuemax={videoLimit} aria-label="Videos used">
+              <div className={`h-full rounded-full transition-all ${usagePct >= 100 ? 'bg-pro' : 'bg-white/60'}`} style={{ width: `${usagePct}%` }} />
+            </div>
+            {!isPro && (
+              <button
+                onClick={() => router.push("/pricing")}
+                className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg bg-pro py-1.5 text-xs font-semibold text-black transition hover:brightness-110"
+              >
+                <CrownSimpleIcon size={12} weight="fill" /> Upgrade to Pro
+              </button>
+            )}
           </div>
         )}
 
@@ -223,64 +143,41 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="hover:bg-white/5 hover:text-white h-[52px] rounded-xl px-2">
-                  <div className="flex items-center gap-3 w-full">
-                    {loading ? (
-                      <>
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/10 animate-pulse"></div>
-                        <div className="flex flex-col flex-1 overflow-hidden gap-1.5 text-left">
-                          <div className="h-3 bg-white/10 rounded w-20 animate-pulse"></div>
-                          <div className="h-2.5 bg-white/10 rounded w-32 animate-pulse"></div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#f97316] text-white font-bold text-sm shadow-sm relative">
-                          {(session?.user?.name || userProfile?.name || "U")[0]?.toUpperCase()}
-                          {isPro && (
-                            <span className="absolute -top-1 -right-1 bg-amber-500 rounded-full p-0.5 border border-black shadow">
-                              <CrownSimpleIcon size={8} className="text-black" weight="fill" />
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex flex-col flex-1 overflow-hidden text-left">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-semibold text-white/90 truncate">{session?.user?.name || userProfile?.name || "User"}</span>
-                            {isPro && (
-                              <span className="bg-amber-500/10 text-amber-400 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-500/20 uppercase shrink-0">
-                                Pro
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-xs text-white/50 font-medium truncate">
-                            {session?.user?.email || userProfile?.email}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
+                <SidebarMenuButton className="h-12 rounded-xl px-2 hover:!bg-white/5 data-[state=open]:!bg-white/5">
+                  {loading ? (
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="size-8 shrink-0 rounded-full bg-white/10 animate-pulse" />
+                      <div className="flex flex-1 flex-col gap-1.5">
+                        <div className="h-2.5 w-20 rounded bg-white/10 animate-pulse" />
+                        <div className="h-2 w-32 rounded bg-white/10 animate-pulse" />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 w-full min-w-0">
+                      <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-orange-500 text-sm font-semibold text-white">
+                        {displayName[0]?.toUpperCase()}
+                      </span>
+                      <span className="flex min-w-0 flex-1 flex-col text-left">
+                        <span className="truncate text-sm font-medium text-white/90">{displayName}</span>
+                        <span className="truncate text-xs text-white/45">{email}</span>
+                      </span>
+                      <CaretUpDownIcon size={14} className="shrink-0 text-white/40" />
+                    </div>
+                  )}
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[240px] bg-[#0a0a0a] border-white/10 text-white rounded-xl shadow-xl p-1 mb-2">
+              <DropdownMenuContent side="top" align="start" className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-xl border-white/10 bg-surface p-1 text-white shadow-2xl">
                 <DropdownMenuItem
-                  className="text-white/70 focus:text-white focus:bg-white/10 cursor-pointer flex items-center gap-2.5 rounded-lg font-medium py-2 px-2.5"
+                  className="cursor-pointer gap-2.5 rounded-lg px-2.5 py-2 text-white/75 focus:bg-white/10 focus:text-white"
                   onClick={() => router.push("/pricing")}
                 >
-                  {isPro ? (
-                    <>
-                      <CrownSimpleIcon size={16} className="text-amber-400" weight="fill" />
-                      Manage Plan
-                    </>
-                  ) : (
-                    <>
-                      <LightningIcon size={16} className="text-violet-400" weight="fill" />
-                      Upgrade Plan
-                    </>
-                  )}
+                  {isPro
+                    ? <><CrownSimpleIcon size={16} className="text-pro" weight="fill" /> Manage plan</>
+                    : <><LightningIcon size={16} className="text-pro" weight="fill" /> Upgrade plan</>}
                 </DropdownMenuItem>
-                <div className="h-px bg-white/10 my-1"></div>
+                <DropdownMenuSeparator className="bg-white/10" />
                 <DropdownMenuItem
-                  className="text-white/70 focus:text-white focus:bg-white/10 cursor-pointer flex items-center gap-2.5 rounded-lg font-medium py-2 px-2.5"
+                  className="cursor-pointer gap-2.5 rounded-lg px-2.5 py-2 text-white/75 focus:bg-white/10 focus:text-white"
                   onClick={() => {
                     localStorage.removeItem("token");
                     localStorage.removeItem("user");
