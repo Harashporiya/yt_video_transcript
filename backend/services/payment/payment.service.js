@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { prisma } from "../../lib/prisma.js";
-import { PLANS, FREE_LIMITS, razorpay } from "../../config/plans.config.js";
+import { PLANS, razorpay } from "../../config/plans.config.js";
+import { getUserPlan } from "./plan.service.js";
 
 export async function createOrderService(userId, plan) {
   const selectedPlan = PLANS[plan];
@@ -44,7 +45,7 @@ export async function verifyPaymentService(userId, razorpay_order_id, razorpay_p
     .update(`${razorpay_order_id}|${razorpay_payment_id}`)
     .digest("hex");
 
-  if (expectedSignature !== razorpay_signature) {
+  if (!safeEqual(expectedSignature, razorpay_signature)) {
     throw Object.assign(new Error("Payment signature invalid. Possible fraud attempt."), { statusCode: 400 });
   }
 
@@ -61,16 +62,7 @@ export async function verifyPaymentService(userId, razorpay_order_id, razorpay_p
 
   // Graceful handle: Webhook already activated this payment
   if (order.status === "paid" && order.paymentId === razorpay_payment_id) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { planExpiry: true }
-    });
-    return {
-      planExpiry: user?.planExpiry,
-      isExtension: false,
-      planLabel: PLANS[order.plan].label,
-      message: `Plan activated successfully!`,
-    };
+    return alreadyActivatedResponse(userId, order.plan);
   }
 
   // Security 4: Replay attack prevention
@@ -89,53 +81,81 @@ export async function verifyPaymentService(userId, razorpay_order_id, razorpay_p
     throw Object.assign(new Error(`Payment not successful. Status: ${razorpayPayment.status}`), { statusCode: 400 });
   }
 
-  // Security 7: Amount must match
+  // Security 7: Payment must be for this order and amount
+  if (razorpayPayment.order_id !== razorpay_order_id) {
+    throw Object.assign(new Error("Payment does not belong to this order."), { statusCode: 400 });
+  }
   if (razorpayPayment.amount !== order.amount) {
     throw Object.assign(new Error("Payment amount mismatch. Possible tampering."), { statusCode: 400 });
   }
 
   // All checks passed → Activate plan
-  return await activatePlan(userId, order.plan, razorpay_order_id, razorpay_payment_id, razorpay_signature);
+  const result = await activatePlan(userId, order.plan, razorpay_order_id, razorpay_payment_id, razorpay_signature);
+
+  // The webhook won the race and already activated this order
+  return result ?? alreadyActivatedResponse(userId, order.plan);
+}
+
+async function alreadyActivatedResponse(userId, plan) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { planExpiry: true },
+  });
+  return {
+    planExpiry: user?.planExpiry,
+    isExtension: false,
+    planLabel: PLANS[plan].label,
+    message: `Plan activated successfully!`,
+  };
 }
 
 // ─── Activate Plan (shared by verify + webhook)
+// Returns null when the order was already activated by the other path.
 export async function activatePlan(userId, plan, orderId, paymentId, signature = null) {
   const selectedPlan = PLANS[plan];
-  const now = new Date();
 
-  // Fetch current user to check existing expiry
-  const currentUser = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { plan: true, planExpiry: true },
-  });
-
-  // If already Pro with future expiry → EXTEND (don't overwrite remaining days)
-  const baseDate = (currentUser?.plan === "pro" && currentUser?.planExpiry && currentUser.planExpiry > now)
-    ? currentUser.planExpiry
-    : now;
-
-  const planExpiry = new Date(baseDate.getTime() + selectedPlan.durationDays * 24 * 60 * 60 * 1000);
-  const isExtension = baseDate > now;
-
-  await prisma.$transaction([
-    prisma.paymentOrder.update({
-      where: { razorpayOrderId: orderId },
+  return prisma.$transaction(async (tx) => {
+    // Only the first caller flips the order from pending to paid; the row lock makes the other one wait and see 0 rows.
+    const { count } = await tx.paymentOrder.updateMany({
+      where: { razorpayOrderId: orderId, status: "pending" },
       data: { paymentId, signature, status: "paid", usedAt: true },
-    }),
-    prisma.user.update({
-      where: { id: userId },
-      data: { plan: "pro", planExpiry, videosUsedThisMonth: 0, videosResetAt: now, razorpaySubId: plan },
-    }),
-  ]);
+    });
+    if (count === 0) return null;
 
-  return {
-    planExpiry,
-    isExtension,
-    planLabel: selectedPlan.label,
-    message: isExtension
-      ? `Plan extended! Valid until ${planExpiry.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.`
-      : `${selectedPlan.label} activated successfully!`,
-  };
+    // Lock the user so two different orders can't both extend from the same expiry
+    await tx.$queryRaw`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`;
+
+    const now = new Date();
+    const currentUser = await tx.user.findUnique({
+      where: { id: userId },
+      select: { plan: true, planExpiry: true },
+    });
+
+    // If already Pro with future expiry → EXTEND (don't overwrite remaining days)
+    const baseDate = (currentUser?.plan === "pro" && currentUser?.planExpiry && currentUser.planExpiry > now)
+      ? currentUser.planExpiry
+      : now;
+
+    const planExpiry = new Date(baseDate.getTime() + selectedPlan.durationDays * 24 * 60 * 60 * 1000);
+    const isExtension = baseDate > now;
+
+    // A new plan starts a fresh usage period; an extension keeps the current one running.
+    const usageReset = isExtension ? {} : { videosUsedThisMonth: 0, videosResetAt: now };
+
+    await tx.user.update({
+      where: { id: userId },
+      data: { plan: "pro", planExpiry, razorpaySubId: plan, ...usageReset },
+    });
+
+    return {
+      planExpiry,
+      isExtension,
+      planLabel: selectedPlan.label,
+      message: isExtension
+        ? `Plan extended! Valid until ${planExpiry.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })}.`
+        : `${selectedPlan.label} activated successfully!`,
+    };
+  });
 }
 
 // Webhook Signature Verification 
@@ -144,69 +164,27 @@ export function verifyWebhookSignature(rawBody, signature) {
     .createHmac("sha256", process.env.RAZORPAY_WEBHOOK_SECRET)
     .update(rawBody)
     .digest("hex");
-  return expectedSig === signature;
+  return safeEqual(expectedSig, signature);
+}
+
+// Constant-time string comparison so signatures can't be guessed byte by byte
+function safeEqual(expected, received) {
+  if (typeof received !== "string") return false;
+  const a = Buffer.from(expected);
+  const b = Buffer.from(received);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 
 export async function getPlanStatusService(userId) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: {
-      plan: true,
-      planExpiry: true,
-      videosUsedThisMonth: true,
-      videosResetAt: true,
-      razorpaySubId: true,   // "monthly" | "yearly" | null
-    },
-  });
-
-  if (!user) throw Object.assign(new Error("User not found"), { statusCode: 404 });
-
-  const now = new Date();
-  let effectivePlan = user.plan;
-
-  // Auto-downgrade expired Pro plan
-  if (user.plan === "pro" && user.planExpiry && user.planExpiry < now) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { plan: "free", planExpiry: null, razorpaySubId: null },
-    });
-    effectivePlan = "free";
-  }
-
-  // Reset monthly video count if new month
-  await resetVideosIfNewMonth(userId, user);
-
-  // Pick limits based on actual plan type (monthly vs yearly)
-  const planType = user.razorpaySubId; // "monthly" | "yearly" | null
-  const limits = effectivePlan === "pro" && planType && PLANS[planType]
-    ? { videoLimit: PLANS[planType].videoLimit, chatLimit: PLANS[planType].chatLimit }
-    : effectivePlan === "pro"
-      ? { videoLimit: PLANS["monthly"].videoLimit, chatLimit: PLANS["monthly"].chatLimit } // fallback
-      : FREE_LIMITS;
+  const { isPro, isExpired, planType, planExpiry, limits, videosUsed } = await getUserPlan(userId);
 
   return {
-    plan: effectivePlan,
-    planType: effectivePlan === "pro" ? (planType || "monthly") : null,
-    planExpiry: user.planExpiry,
-    videosUsedThisMonth: user.videosUsedThisMonth,
-    isExpired: user.plan === "pro" && user.planExpiry && user.planExpiry < now,
+    plan: isPro ? "pro" : "free",
+    planType,
+    planExpiry,
+    videosUsedThisMonth: videosUsed,
+    isExpired,
     limits,
   };
-}
-
-//  Helper: Reset monthly video count
-async function resetVideosIfNewMonth(userId, user) {
-  const now = new Date();
-  const resetAt = user.videosResetAt ? new Date(user.videosResetAt) : null;
-
-  if (!resetAt || resetAt.getMonth() !== now.getMonth() || resetAt.getFullYear() !== now.getFullYear()) {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { videosUsedThisMonth: 0, videosResetAt: now },
-    });
-    // Update in-memory user object properties so they return correctly in the current request
-    user.videosUsedThisMonth = 0;
-    user.videosResetAt = now;
-  }
 }
