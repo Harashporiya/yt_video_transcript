@@ -1,5 +1,6 @@
 import { llm } from "../ai/llm.js";
 import { getRepresentativeTranscript } from "../../utils/transcript.util.js";
+import { parseLLMJson } from "../../utils/llmJson.util.js";
 
 export const generateSummary = async (transcript) => {
   const representativeTranscript = getRepresentativeTranscript(transcript);
@@ -18,19 +19,5 @@ Transcript:
 ${representativeTranscript}
 `);
 
-  try {
-    const cleanData = response.content
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-
-
-    const jsonMatch = cleanData.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No valid JSON found in LLM response");
-
-    return JSON.parse(jsonMatch[0]);
-  } catch (err) {
-    console.error("Failed to parse LLM response:", response.content);
-    throw new Error(`Summary generation failed: ${err.message}`);
-  }
+  return parseLLMJson(response.content, "Summary");
 };
