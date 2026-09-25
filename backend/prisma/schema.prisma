@@ -15,7 +15,8 @@ model User {
 
   plan             String    @default("free")
   planExpiry       DateTime?               
-  videosUsedThisMonth Int    @default(0)
+  videosUsedThisMonth Int    @default(0) // Pro usage in the current billing period
+  videosUsedTotal  Int       @default(0) // lifetime usage while on the free plan
   videosResetAt    DateTime?
   razorpaySubId    String?
 
@@ -36,6 +37,8 @@ model Video{
   thumbnail String?
   namespace   String @unique
   totalChunks Int      @default(0)
+  transcript  String?  @db.Text
+  chatCount   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   summaries    VideoSummary[]
