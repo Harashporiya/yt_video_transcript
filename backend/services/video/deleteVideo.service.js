@@ -1,47 +1,26 @@
 import { prisma } from "../../lib/prisma.js";
 import { pineconeIndex } from "../ai/pinecone.js";
 
-export const deleteVideoService =async (userId,videoId) => {
+// Returns false when the video doesn't exist.
+export const deleteVideoService = async (userId, videoId) => {
 
-    const namespace =`${userId}-${videoId}`;
+    const namespace = `${userId}-${videoId}`;
 
-    await pineconeIndex.namespace(namespace).deleteAll();
+    // Summary, questions and chat messages are removed by the cascade
+    const { count } = await prisma.video.deleteMany({
+      where: { userId, videoId },
+    });
 
-    const video =await prisma.video.findUnique({
-        where: {
-          userId_videoId: {
-            userId,
-            videoId,
-          },
-        },
-      });
-
-    if (!video) {
-      throw new Error(
-        "Video not found"
-      );
+    if (count === 0) {
+      return false;
     }
 
-    await prisma.videoSummary.deleteMany({
-      where: {
-        videoRefId: video.id,
-      },
-    });
-
-    await prisma.videoQuestion.deleteMany({
-      where: {
-        videoRefId: video.id,
-      },
-    });
-
-    await prisma.video.delete({
-      where: {
-        userId_videoId: {
-          userId,
-          videoId,
-        },
-      },
-    });
+    try {
+      await pineconeIndex.namespace(namespace).deleteAll();
+    } catch (error) {
+      // The video is already gone for the user; leftover vectors are overwritten if it is processed again
+      console.error(`[DeleteVideo] Failed to delete Pinecone namespace ${namespace}:`, error);
+    }
 
     return true;
 };
