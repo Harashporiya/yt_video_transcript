@@ -4,7 +4,7 @@ import { AppSidebar } from "@/components/app-sidebar"
 import { VideoProcessor } from "@/components/dashboard/video-processor"
 import { VideoChat } from "@/components/dashboard/video-chat"
 import {SidebarInset,SidebarProvider,SidebarTrigger} from "@/components/ui/sidebar"
-import {YoutubeLogoIcon,SpinnerGapIcon,CheckCircleIcon,VideoCameraIcon} from "@phosphor-icons/react"
+import { YoutubeLogoIcon, SpinnerGapIcon, CheckCircleIcon, VideoCameraIcon, XIcon, ArrowSquareOutIcon } from "@phosphor-icons/react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { isTokenValid } from "@/lib/utils"
@@ -25,11 +25,22 @@ function SuccessToast() {
     if (!successMessage) return null
 
     return (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] animate-in fade-in slide-in-from-top-3 duration-300">
-            <div className="flex items-center gap-3 bg-[#0d1a0d] border border-green-500/40 text-green-400 px-5 py-3.5 rounded-2xl shadow-2xl shadow-green-500/10 backdrop-blur-sm">
-                <CheckCircleIcon size={20} weight="fill" className="text-green-400 shrink-0" />
-                <span className="text-sm font-semibold">{successMessage}</span>
+        <div role="status" className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999] w-[calc(100%-2rem)] max-w-md animate-in fade-in slide-in-from-top-3 duration-300">
+            <div className="flex items-start gap-3 rounded-2xl border border-emerald-500/25 bg-surface/95 px-4 py-3 text-sm text-white shadow-2xl shadow-black/60 backdrop-blur">
+                <CheckCircleIcon size={20} weight="fill" className="mt-px shrink-0 text-emerald-400" />
+                <span className="flex-1 text-white/85">{successMessage}</span>
+                <button onClick={() => dispatch(setSuccessMessage(null))} aria-label="Dismiss" className="text-white/40 hover:text-white transition-colors">
+                    <XIcon size={16} weight="bold" />
+                </button>
             </div>
+        </div>
+    )
+}
+
+function FullScreenSpinner() {
+    return (
+        <div className="bg-background w-full h-screen flex items-center justify-center">
+            <SpinnerGapIcon className="animate-spin text-white/60" size={28} />
         </div>
     )
 }
@@ -43,29 +54,42 @@ function DashboardContent() {
     const activeVideoTitle = activeVideo?.title || activeVideoId
 
     return (
-        <SidebarInset className="bg-black text-white flex flex-col h-screen overflow-hidden">
-            <header className="flex h-14 shrink-0 items-center justify-between gap-2 px-4 bg-black border-b border-white/10">
-                <div className="flex items-center gap-2 min-w-0">
-                    <SidebarTrigger className="text-white hover:bg-white/5 hover:text-white shrink-0" />
-                    {activeVideoId ? (
-                        <div className="flex items-center gap-2 min-w-0">
-                            <div className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 hover:text-white rounded-lg cursor-pointer transition-colors text-lg font-semibold text-white/90 shrink-0">
-                                <YoutubeLogoIcon size={22} className="text-white" weight="fill" />
-                            </div>
-                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl px-3 py-1.5 min-w-0 max-w-[420px]">
-                                <VideoCameraIcon size={15} className="text-red-400 shrink-0" />
-                                <span className="text-sm font-medium text-white/80 truncate" title={activeVideoTitle ?? ""}>
-                                    {activeVideoTitle}
-                                </span>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="flex items-center gap-2 px-3 py-2 hover:bg-white/5 hover:text-white rounded-lg cursor-pointer transition-colors text-lg font-semibold text-white/90">
-                            <YoutubeLogoIcon size={24} className="text-white" weight="fill" />
-                            <span>Transcripter</span>
-                        </div>
-                    )}
-                </div>
+        <SidebarInset className="bg-background text-white flex flex-col h-svh overflow-hidden">
+            <header className="flex h-14 shrink-0 items-center gap-3 px-3 md:px-4 border-b border-white/[0.08] bg-background/80 backdrop-blur">
+                <SidebarTrigger className="text-white/60 hover:bg-white/5 hover:text-white shrink-0" />
+                <div className="h-5 w-px bg-white/10 shrink-0" />
+                {activeVideoId ? (
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {activeVideo?.thumbnail ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                                src={activeVideo.thumbnail}
+                                alt=""
+                                className="h-8 aspect-video rounded-md object-cover ring-1 ring-white/10 shrink-0"
+                                onError={(e) => { e.currentTarget.src = `https://img.youtube.com/vi/${activeVideoId}/mqdefault.jpg` }}
+                            />
+                        ) : (
+                            <span className="flex h-8 aspect-video items-center justify-center rounded-md bg-surface-2 shrink-0">
+                                <VideoCameraIcon size={14} className="text-white/40" />
+                            </span>
+                        )}
+                        <h1 className="text-sm font-medium text-white/90 truncate" title={activeVideoTitle ?? ""}>
+                            {activeVideoTitle}
+                        </h1>
+                        <a
+                            href={`https://www.youtube.com/watch?v=${activeVideoId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-auto hidden sm:inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-medium text-white/60 hover:text-white hover:bg-white/5 transition-colors shrink-0"
+                        >
+                            <YoutubeLogoIcon size={14} weight="fill" className="text-brand" />
+                            Open on YouTube
+                            <ArrowSquareOutIcon size={12} />
+                        </a>
+                    </div>
+                ) : (
+                    <h1 className="text-sm font-medium text-white/70">New video</h1>
+                )}
             </header>
 
             {!activeVideoId ? (
@@ -118,14 +142,15 @@ export default function Page() {
     }, [status, session, router]);
 
     if (!isAuthenticated) {
-        return <div className="bg-black text-white w-full h-screen flex items-center justify-center"><SpinnerGapIcon className="animate-spin" size={32} /></div>
+        return <FullScreenSpinner />
     }
 
     return (
         <SidebarProvider>
             <SuccessToast />
-            <AppSidebar />
-            <Suspense fallback={<div className="bg-black text-white w-full h-screen flex items-center justify-center"><SpinnerGapIcon className="animate-spin" size={32} /></div>}>
+            {/* The sidebar reads ?v= to highlight the active video, so it sits inside the Suspense boundary */}
+            <Suspense fallback={<FullScreenSpinner />}>
+                <AppSidebar />
                 <DashboardContent />
             </Suspense>
         </SidebarProvider>
