@@ -11,12 +11,12 @@ A full-stack AI tool that pulls transcripts from any YouTube video, generates sm
 ## ⚡ What It Does
 
 - **Smart Transcript Extraction** — First tries official/auto-generated YouTube subtitles. Falls back to Apify scraper if YouTube blocks the request.
-- **Interactive Video Q&A (RAG)** — Chunks the transcript, embeds it into Pinecone via HuggingFace, and uses Groq (Llama 3.3) to answer questions with precise context.
+- **Interactive Video Q&A (RAG)** — Chunks the transcript, embeds it into Pinecone via HuggingFace, and uses Groq (gpt-oss-20b) to answer questions with precise context.
 - **LangGraph Conditional Retrieval** — Intelligently decides whether a query needs Pinecone vector search or can be handled as a simple conversational response (greetings, identity questions, etc.) — skipping unnecessary DB calls.
 - **Clean Summary & Key Takeaways** — Structured summaries so you can understand a video's core content in under 30 seconds.
 - **Interview Preparation** — Generates practice questions (Easy, Medium, Hard) based on video content.
 - **Payments with Razorpay** — Pro plan subscription with Monthly (₹199) and Yearly (₹999) tiers, secured via Razorpay webhooks.
-- **Per-Plan Usage Limits** — Free: 1 video / 3 chats. Pro Monthly: 5 videos / 15 chats. Pro Yearly: 30 videos / 35 chats.
+- **Per-Plan Usage Limits** — Free: 1 video total / 3 chats per video. Pro Monthly: 5 videos per month / 15 chats. Pro Yearly: 30 videos per year / 35 chats.
 - **Premium Dark Mode UI** — Minimal black aesthetic, smooth animations, glassmorphism input boxes, real-time AI status indicators.
 
 ---
@@ -37,13 +37,13 @@ A full-stack AI tool that pulls transcripts from any YouTube video, generates sm
 |------|---------|
 | Node.js + Express 5 | API server |
 | PostgreSQL (Neon) + Prisma 7 | Database + ORM |
-| Groq API (`llama-3.3-70b-versatile`) | LLM for chat & summaries |
-| HuggingFace (`BAAI/bge-small-en-v1.5`) | 384-dim text embeddings |
+| Groq API (`openai/gpt-oss-20b`) | LLM for chat & summaries |
+| HuggingFace (`sentence-transformers/all-MiniLM-L6-v2`) | 384-dim text embeddings |
 | Pinecone | Vector store for RAG |
 | LangChain + LangGraph | AI orchestration + conditional routing |
 | Razorpay | Payment gateway |
 | Apify Client | Transcript fallback scraper |
-| youtubei.js | Video metadata (title, thumbnail) |
+| YouTube oEmbed | Video metadata (title, thumbnail) |
 
 ---
 
@@ -52,17 +52,17 @@ A full-stack AI tool that pulls transcripts from any YouTube video, generates sm
 ```
 User pastes YouTube URL
         ↓
-Backend fetches Video Info (title, thumbnail) via youtubei.js
+Backend fetches Video Info (title, thumbnail) via YouTube oEmbed
         ↓
 Transcript extracted (youtube-transcript → Apify fallback)
         ↓
 Transcript split into chunks (RecursiveCharacterTextSplitter)
         ↓
-Chunks embedded via HuggingFace (BAAI/bge-small-en-v1.5)
+Chunks embedded via HuggingFace (all-MiniLM-L6-v2)
         ↓
 Vectors stored in Pinecone (namespace = userId-videoId)
         ↓
-Summary generated via Groq LLM (llama-3.3-70b-versatile)
+Summary generated via Groq LLM (gpt-oss-20b)
         ↓
 Video + Summary saved to PostgreSQL via Prisma
         ↓
@@ -151,6 +151,8 @@ Create a `.env` file in the `backend` folder:
 
 ```env
 PORT=3001
+TRUST_PROXY=1 # proxies in front of the app (Render/Railway: 1, local: 0); defaults to 1 when NODE_ENV=production
+GOOGLE_CLIENT_ID="same_google_oauth_client_id_as_frontend"
 DATABASE_URL="postgresql://user:password@host:5432/db_name?sslmode=require"
 JWT_SECRET="your_custom_jwt_secret"
 GROQ_API_KEY="your_groq_api_key"
@@ -164,13 +166,15 @@ LOCAL_FRONTEND_URL="http://localhost:3000"
 FRONTEND_DEPLOY_URL="https://your-production-app.vercel.app"
 ```
 
-Push DB schema and start:
+Apply the database migrations and start:
 
 ```bash
-npx prisma db push
+npx prisma migrate deploy
 npx prisma generate
 npm run dev
 ```
+
+> Use `migrate deploy` rather than `db push`: some migrations also backfill data (usage counters, JSON cleanup), and `db push` skips that SQL.
 
 Backend runs at `http://localhost:3001`.
 
@@ -213,7 +217,9 @@ Open `http://localhost:3000` and you're good to go!
 
 ### Important Notes
 
-> **Pinecone:** The index must have **384 dimensions** to match the `BAAI/bge-small-en-v1.5` embedding model.
+> **Pinecone:** The index must have **384 dimensions** to match the `all-MiniLM-L6-v2` embedding model.
+
+> **Google Login:** The backend verifies the Google ID token itself, so `GOOGLE_CLIENT_ID` must be set on the backend too (same value as the frontend).
 
 > **Razorpay Webhook:** Set the webhook URL in Razorpay Dashboard to `https://your-backend.onrender.com/api/payment/webhook`. The secret must match `RAZORPAY_WEBHOOK_SECRET`.
 
