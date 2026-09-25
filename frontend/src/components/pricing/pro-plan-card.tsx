@@ -1,93 +1,71 @@
 "use client"
 
-import {
-  CheckCircleIcon,
-  CrownSimpleIcon,
-  SpinnerGapIcon,
-  InfinityIcon,
-} from "@phosphor-icons/react"
+import Link from "next/link"
+import { CheckIcon, CrownSimpleIcon, SpinnerGapIcon } from "@phosphor-icons/react"
+import { cn } from "@/lib/utils"
 import { PlanConfig } from "./plans"
 
 interface ProPlanCardProps {
   planKey: "monthly" | "yearly"
   plan: PlanConfig
-  isPro: boolean
-  isLoading: boolean
-  onUpgrade: (plan: "monthly" | "yearly") => void
+  isPro?: boolean
+  isLoading?: boolean
+  onUpgrade?: (plan: "monthly" | "yearly") => void
+  /** When set (e.g. on the landing page) the CTA links here instead of starting checkout */
+  href?: string
 }
 
-export function ProPlanCard({ planKey, plan, isPro, isLoading, onUpgrade }: ProPlanCardProps) {
+export function ProPlanCard({ planKey, plan, isPro = false, isLoading = false, onUpgrade, href }: ProPlanCardProps) {
+  const ctaClass = cn(
+    "mt-8 flex h-11 w-full items-center justify-center gap-2 rounded-xl text-sm font-semibold transition-all active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed",
+    plan.highlight
+      ? "bg-white text-black hover:bg-white/90"
+      : "border border-white/15 text-white hover:bg-white/5"
+  )
+
   return (
     <div
-      className={`rounded-3xl border bg-gradient-to-br ${plan.color} ${plan.border} p-7 flex flex-col relative overflow-hidden`}
+      className={cn(
+        "relative flex flex-col rounded-2xl border p-7",
+        plan.highlight
+          ? "border-brand/40 bg-gradient-to-b from-brand/[0.09] to-surface shadow-2xl shadow-brand/10"
+          : "border-white/10 bg-surface"
+      )}
     >
-      {/* Best value badge */}
       {plan.badge && (
-        <div className="absolute top-4 right-4 bg-violet-500 text-white text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wider">
+        <span className="absolute -top-3 left-7 rounded-full bg-brand px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-brand-foreground shadow-lg shadow-brand/30">
           {plan.badge}
-        </div>
+        </span>
       )}
 
-      {/* Plan info */}
-      <div className="mb-6">
-        <h3 className="text-lg font-bold text-white mb-1">{plan.label}</h3>
-        <div className="flex items-end gap-1 mb-2">
-          <span className="text-4xl font-bold text-white">{plan.price}</span>
-          <span className="text-white/50 text-sm mb-1.5">{plan.period}</span>
-        </div>
-        <p className="text-white/60 text-sm">{plan.description}</p>
+      <h3 className="flex items-center gap-1.5 text-sm font-medium text-white/80">
+        <CrownSimpleIcon size={14} weight="fill" className="text-pro" />
+        {plan.label}
+      </h3>
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className="text-4xl font-semibold tracking-tight text-white">{plan.price}</span>
+        <span className="text-sm text-white/40">{plan.period}</span>
       </div>
+      <p className="mt-2 text-sm text-white/55">{plan.description}</p>
 
-      {/* Features list */}
-      <ul className="flex-1 space-y-3 mb-6">
+      <ul className="mt-7 flex-1 space-y-3">
         {plan.features.map((f) => (
-          <li key={f} className="flex items-center gap-2.5 text-sm text-white/80">
-            <CheckCircleIcon size={16} weight="fill" className="text-green-400 shrink-0" />
-            {f === "Unlimited videos" || f === "Unlimited chat messages" ? (
-              <span className="flex items-center gap-1.5">
-                <InfinityIcon size={14} className="text-violet-400" weight="bold" />
-                {f}
-              </span>
-            ) : (
-              f
-            )}
+          <li key={f} className="flex items-start gap-2.5 text-sm text-white/80">
+            <CheckIcon size={16} weight="bold" className={cn("mt-0.5 shrink-0", plan.highlight ? "text-brand" : "text-white/60")} />
+            {f}
           </li>
         ))}
       </ul>
 
-      {/* CTA button */}
-      {isPro ? (
-        <button
-          disabled
-          className={`h-12 w-full rounded-xl font-bold text-sm flex items-center justify-center gap-2 cursor-not-allowed opacity-60
-            ${
-              planKey === "yearly"
-                ? "bg-violet-500/20 text-violet-400 border border-violet-500/30"
-                : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-            }`}
-        >
-          <CrownSimpleIcon size={16} weight="fill" />
-          You already have Pro version
-        </button>
+      {href ? (
+        <Link href={href} className={ctaClass}>Get {plan.label}</Link>
+      ) : isPro ? (
+        <div className="mt-8 flex h-11 items-center justify-center gap-2 rounded-xl bg-pro/10 text-sm font-medium text-pro">
+          <CrownSimpleIcon size={14} weight="fill" /> You&apos;re on Pro
+        </div>
       ) : (
-        <button
-          onClick={() => onUpgrade(planKey)}
-          disabled={isLoading}
-          className={`h-12 rounded-xl font-bold text-sm transition-all duration-200 flex items-center justify-center gap-2
-            ${
-              planKey === "yearly"
-                ? "bg-violet-500 hover:bg-violet-400 text-white shadow-lg shadow-violet-500/30 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-                : "bg-amber-500 hover:bg-amber-400 text-black shadow-lg shadow-amber-500/30 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
-            }`}
-        >
-          {isLoading ? (
-            <SpinnerGapIcon size={18} className="animate-spin" weight="bold" />
-          ) : (
-            <>
-              <CrownSimpleIcon size={16} weight="fill" />
-              Upgrade to {plan.label}
-            </>
-          )}
+        <button onClick={() => onUpgrade?.(planKey)} disabled={isLoading} className={ctaClass}>
+          {isLoading ? <SpinnerGapIcon size={18} className="animate-spin" weight="bold" /> : <>Upgrade to {plan.label}</>}
         </button>
       )}
     </div>
