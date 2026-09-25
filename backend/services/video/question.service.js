@@ -1,5 +1,6 @@
 import { llm } from "../ai/llm.js";
 import { getRepresentativeTranscript } from "../../utils/transcript.util.js";
+import { parseLLMJson } from "../../utils/llmJson.util.js";
 
 export const generateQuestions = async (transcript) => {
   const representativeTranscript = getRepresentativeTranscript(transcript);
@@ -37,7 +38,5 @@ Transcript:
 ${representativeTranscript}
 `);
 
-  const cleanData = response.content.replace(/```json/g, "").replace(/```/g, "").trim();
-
-  return JSON.parse(cleanData);
+  return parseLLMJson(response.content, "Interview question");
 };
