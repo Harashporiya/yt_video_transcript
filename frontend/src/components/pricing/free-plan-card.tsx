@@ -1,41 +1,46 @@
 "use client"
 
-import { CheckCircleIcon } from "@phosphor-icons/react"
-
-const FREE_FEATURES = [
-  "1 video total",
-  "3 chat messages per video",
-  "AI Summaries",
-  "Interview Questions",
-]
+import Link from "next/link"
+import { CheckIcon } from "@phosphor-icons/react"
+import { FREE_PLAN } from "./plans"
 
 interface FreePlanCardProps {
-  isPro: boolean
+  isPro?: boolean
+  /** When set (e.g. on the landing page) the card links here instead of showing plan status */
+  href?: string
 }
 
-export function FreePlanCard({ isPro }: FreePlanCardProps) {
+export function FreePlanCard({ isPro = false, href }: FreePlanCardProps) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-white/[0.02] p-7 flex flex-col">
-      <div className="mb-6">
-        <h3 className="text-lg font-bold text-white/70 mb-1">Free</h3>
-        <div className="flex items-end gap-1 mb-2">
-          <span className="text-4xl font-bold text-white/50">₹0</span>
-        </div>
-        <p className="text-white/30 text-sm">For occasional use</p>
+    <div className="flex flex-col rounded-2xl border border-white/10 bg-surface p-7">
+      <h3 className="text-sm font-medium text-white/60">{FREE_PLAN.label}</h3>
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className="text-4xl font-semibold tracking-tight text-white">{FREE_PLAN.price}</span>
+        <span className="text-sm text-white/40">{FREE_PLAN.period}</span>
       </div>
+      <p className="mt-2 text-sm text-white/45">{FREE_PLAN.description}</p>
 
-      <ul className="flex-1 space-y-3 mb-8">
-        {FREE_FEATURES.map((f) => (
-          <li key={f} className="flex items-center gap-2.5 text-sm text-white/40">
-            <CheckCircleIcon size={16} weight="fill" className="text-white/20 shrink-0" />
+      <ul className="mt-7 flex-1 space-y-3">
+        {FREE_PLAN.features.map((f) => (
+          <li key={f} className="flex items-start gap-2.5 text-sm text-white/65">
+            <CheckIcon size={16} weight="bold" className="mt-0.5 shrink-0 text-white/35" />
             {f}
           </li>
         ))}
       </ul>
 
-      <div className="h-12 rounded-xl bg-white/5 flex items-center justify-center text-white/30 text-sm font-semibold">
-        {isPro ? "Downgrade" : "Current Plan"}
-      </div>
+      {href ? (
+        <Link
+          href={href}
+          className="mt-8 flex h-11 items-center justify-center rounded-xl border border-white/15 text-sm font-semibold text-white transition-colors hover:bg-white/5"
+        >
+          Start for free
+        </Link>
+      ) : (
+        <div className="mt-8 flex h-11 items-center justify-center rounded-xl bg-white/[0.04] text-sm font-medium text-white/40">
+          {isPro ? "Included" : "Your current plan"}
+        </div>
+      )}
     </div>
   )
 }
