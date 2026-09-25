@@ -1,18 +1,51 @@
 import { prisma } from "../lib/prisma.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken"
+import crypto from "crypto";
 import dotenv from "dotenv";
 dotenv.config();
 
+const GOOGLE_ISSUERS = ["accounts.google.com", "https://accounts.google.com"];
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MIN_PASSWORD_LENGTH = 6;
+
+// Checks the Google ID token with Google and returns the verified profile, or null if it's not valid for this app.
+const verifyGoogleIdToken = async (idToken) => {
+  const response = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`);
+  if (!response.ok) return null;
+
+  const payload = await response.json();
+  const isValid =
+    payload.aud === process.env.GOOGLE_CLIENT_ID &&
+    GOOGLE_ISSUERS.includes(payload.iss) &&
+    (payload.email_verified === true || payload.email_verified === "true") &&
+    payload.email;
+
+  if (!isValid) return null;
+  return { email: payload.email, name: payload.name || payload.email.split("@")[0] };
+};
+
 export const googleAuth = async (req, res) => {
-  const { email, name } = req.body;
+  const { idToken } = req.body;
+
+  if (!idToken || typeof idToken !== "string") {
+    return res.status(400).json({ message: "Google ID token is required" });
+  }
+
   try {
+    const profile = await verifyGoogleIdToken(idToken);
+    if (!profile) {
+      return res.status(401).json({ message: "Invalid Google token" });
+    }
+
+    const { email, name } = profile;
     let user = await prisma.user.findUnique({
       where: { email }
     });
 
     if (!user) {
-      const randomPassword = Math.random().toString(36).slice(-12);
+      // Google users sign in through Google only; this random password is never shown to anyone
+      const randomPassword = crypto.randomBytes(32).toString("hex");
       const hashedPassword = await bcrypt.hash(randomPassword, 10);
       user = await prisma.user.create({
         data: {
@@ -39,6 +72,18 @@ export const signUp = async (req, res) => {
   try {
     if (!name || !password || !email) {
       return res.status(400).json({ message: "All fields are required" })
+    }
+
+    if (typeof email !== "string" || !EMAIL_PATTERN.test(email)) {
+      return res.status(400).json({ message: "Please enter a valid email address" })
+    }
+
+    if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH) {
+      return res.status(400).json({ message: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` })
+    }
+
+    if (typeof name !== "string" || name.trim().length === 0 || name.length > 100) {
+      return res.status(400).json({ message: "Please enter a valid name" })
     }
 
     const existingUser = await prisma.user.findUnique({
@@ -81,7 +126,7 @@ export const login = async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    if (!email || !password) {
+    if (!email || !password || typeof email !== "string" || typeof password !== "string") {
       return res.status(400).json({ message: "All fields are required" })
     }
     const user = await prisma.user.findUnique({
