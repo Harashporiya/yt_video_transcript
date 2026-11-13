@@ -1,14 +1,9 @@
-import "dotenv/config";
+import { HuggingFaceTransformersEmbeddings } from "@langchain/community/embeddings/huggingface_transformers";
 
-// import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
-
-// export const embeddings = new GoogleGenerativeAIEmbeddings({
-//   apiKey: process.env.GOOGLE_GEMINI_API_KEY,
-//   model: "gemini-embedding-001",
-// });
-import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf";
-
-export const embeddings = new HuggingFaceInferenceEmbeddings({
-  apiKey: process.env.HUGGINGFACE_API_KEY,
-  model: "sentence-transformers/all-MiniLM-L6-v2",
+// Runs all-MiniLM-L6-v2 locally (CPU) instead of the paid Hugging Face Inference API.
+// Same model, 384 dims, mean pooling + normalization, so existing Pinecone vectors stay compatible.
+// The model (~23MB) is downloaded on first use and cached in node_modules/@huggingface/transformers/.cache.
+export const embeddings = new HuggingFaceTransformersEmbeddings({
+  model: "Xenova/all-MiniLM-L6-v2",
+  pretrainedOptions: { dtype: "fp32" },
 });

@@ -28,7 +28,7 @@ A full-stack AI tool that pulls transcripts from any YouTube video, generates sm
 ## ⚡ What It Does
 
 - **Smart Transcript Extraction** — First tries official/auto-generated YouTube subtitles. Falls back to Apify scraper if YouTube blocks the request.
-- **Interactive Video Q&A (RAG)** — Chunks the transcript, embeds it into Pinecone via HuggingFace, and uses Groq (gpt-oss-20b) to answer questions with precise context.
+- **Interactive Video Q&A (RAG)** — Chunks the transcript, embeds it locally with all-MiniLM-L6-v2 (Transformers.js) into Pinecone, and uses Groq (gpt-oss-20b) to answer questions with precise context.
 - **LangGraph Conditional Retrieval** — Intelligently decides whether a query needs Pinecone vector search or can be handled as a simple conversational response (greetings, identity questions, etc.) — skipping unnecessary DB calls.
 - **Clean Summary & Key Takeaways** — Structured summaries so you can understand a video's core content in under 30 seconds.
 - **Interview Preparation** — Generates practice questions (Easy, Medium, Hard) based on video content.
@@ -55,7 +55,7 @@ A full-stack AI tool that pulls transcripts from any YouTube video, generates sm
 | Node.js + Express 5 | API server |
 | PostgreSQL (Neon) + Prisma 7 | Database + ORM |
 | Groq API (`openai/gpt-oss-20b`) | LLM for chat & summaries |
-| HuggingFace (`sentence-transformers/all-MiniLM-L6-v2`) | 384-dim text embeddings |
+| Transformers.js (`Xenova/all-MiniLM-L6-v2`) | 384-dim text embeddings, run locally on CPU (no API key) |
 | Pinecone | Vector store for RAG |
 | LangChain + LangGraph | AI orchestration + conditional routing |
 | Razorpay | Payment gateway |
@@ -75,7 +75,7 @@ Transcript extracted (youtube-transcript → Apify fallback)
         ↓
 Transcript split into chunks (RecursiveCharacterTextSplitter)
         ↓
-Chunks embedded via HuggingFace (all-MiniLM-L6-v2)
+Chunks embedded locally via Transformers.js (all-MiniLM-L6-v2)
         ↓
 Vectors stored in Pinecone (namespace = userId-videoId)
         ↓
@@ -173,7 +173,6 @@ GOOGLE_CLIENT_ID="same_google_oauth_client_id_as_frontend"
 DATABASE_URL="postgresql://user:password@host:5432/db_name?sslmode=require"
 JWT_SECRET="your_custom_jwt_secret"
 GROQ_API_KEY="your_groq_api_key"
-HUGGINGFACE_API_KEY="your_huggingface_api_key"
 PINECONE_API_KEY="your_pinecone_api_key"
 APIFY_API_TOKEN="your_apify_api_token"
 RAZORPAY_KEY_ID="your_razorpay_key_id"
